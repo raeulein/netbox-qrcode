@@ -1,5 +1,5 @@
 from io import BytesIO
-from typing import Dict, Any
+from typing import Dict, Any, Tuple
 
 from netbox.plugins.utils import get_plugin_config
 from brother_ql import BrotherQLRaster
@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup
 from .html_render import render_html_to_png
 
 # ---------------------------------------------------------------------------
-# Pixelmaße bei 300 dpi – Keys entsprechen Brother‑Labelcodes
+# Pixel‑Maße bei 300 dpi – Keys entsprechen Brother‑Labelcodes
 # ---------------------------------------------------------------------------
 _LABEL_SPECS: dict[str, int | tuple[int, int]] = {
     "12": 106, "29": 306, "38": 413, "50": 554, "54": 590, "62": 696, "102": 1164,
@@ -24,10 +24,10 @@ _LABEL_SPECS: dict[str, int | tuple[int, int]] = {
 
 
 # ---------------------------------------------------------------------------
-# Konfiguration aus den NetBox‑Settings holen
+# Konfiguration aus NetBox‑Settings laden
 # ---------------------------------------------------------------------------
 
-def _get_printer_cfg() -> tuple[Dict[str, Any], str]:
+def _get_printer_cfg() -> Tuple[Dict[str, Any], str]:
     printers = get_plugin_config("netbox_qrcode", "PRINTERS", {})
     default_key = get_plugin_config(
         "netbox_qrcode", "DEFAULT_PRINTER", next(iter(printers), None)
@@ -37,11 +37,33 @@ def _get_printer_cfg() -> tuple[Dict[str, Any], str]:
 
 
 # ---------------------------------------------------------------------------
-#   Hauptfunktion: HTML → Brother‑QL‑Druck
+# Hauptfunktion: HTML → Brother‑QL‑Druck
 # ---------------------------------------------------------------------------
 
+def _scale_image_to_label(img: Image.Image, width_px: int, height_px: int) -> Image.Image:
+    """Bringt das Bild auf die Ziel‑Auflösung (≥ 300 dpi)."""
+    if img.size == (width_px, height_px):
+        return img  # alles passt schon
+
+    # Skalierungsfaktor wählen, so dass beide Seiten ≥ Zielmaß
+    scale = max(width_px / img.width, height_px / img.height)
+    new_size = (round(img.width * scale), round(img.height * scale))
+    return img.resize(new_size, Image.LANCZOS)
+
+
+def _orient_image(img: Image.Image, width_px: int, height_px: int) -> Image.Image:
+    """Dreht das Bild, falls Breite/Höhe vertauscht sind."""
+    if img.size == (width_px, height_px):
+        return img
+    if img.size == (height_px, width_px):
+        return img.rotate(90, expand=True)
+    raise RuntimeError(
+        f"Bad image dimensions after scaling: {img.size}. Expecting {width_px}×{height_px}."
+    )
+
+
 def print_label_from_html(html: str, label_code: str | None = None) -> None:
-    """Rendert HTML in ein PNG, skaliert/rotiert es und sendet es zum Drucker."""
+    """Rendert HTML, skaliert/rotiert es passend und schickt es an den Brother‑Drucker."""
 
     # 1) Drucker‑ und Label‑Spezifikation ermitteln
     p_cfg, default_label = _get_printer_cfg()
@@ -52,27 +74,18 @@ def print_label_from_html(html: str, label_code: str | None = None) -> None:
     except KeyError as exc:
         raise RuntimeError(f"Unbekannter Label‑Code '{code}'.") from exc
 
-    if isinstance(spec, int):               # Endlosband
-        width_px, height_px = spec, spec * 4
-    else:                                   # Vorgestanztes Etikett
-        width_px, height_px = spec
+    width_px, height_px = (spec, spec * 4) if isinstance(spec, int) else spec
 
-    # 2) HTML → Pillow‑Bild (WeasyPrint liefert 96 dpi)
+    # 2) HTML → Pillow (WeasyPrint rendert in 96 dpi → zu klein)
     img: Image.Image = render_html_to_png(html, width_px, height_px)
 
-    # 3) Wenn das Bild schmaler als das Band ist, fehlende Auflösung hochskalieren.
-    #    (canvas_width war in älteren brother_ql‑Versionen nicht vorhanden.)
-    if img.width < width_px:
-        scale = width_px / img.width
-        new_size = (width_px, int(img.height * scale))
-        img = img.resize(new_size, Image.LANCZOS)
+    # 3) Auf Ziel‑Auflösung hochskalieren
+    img = _scale_image_to_label(img, width_px, height_px)
 
-    # 4) Für querformatige Etiketten (Breite > Höhe) muss das Bild gedreht werden,
-    #    wenn es noch hochkant ist.
-    if img.height > img.width:
-        img = img.rotate(90, expand=True)
+    # 4) Orientierung prüfen / drehen
+    img = _orient_image(img, width_px, height_px)
 
-    # 5) In Brother‑Raster wandeln und schicken
+    # 5) In Brother‑Raster wandeln und senden
     raster = BrotherQLRaster(p_cfg["MODEL"])
     instr = convert(raster, [img], label=code, rotate="0")  # bereits korrekt orientiert
 
@@ -81,12 +94,11 @@ def print_label_from_html(html: str, label_code: str | None = None) -> None:
 
 
 # ---------------------------------------------------------------------------
-#   HTML‑Snippet aus qrcode3.html herauslösen
+# Label‑DIV aus qrcode3.html extrahieren
 # ---------------------------------------------------------------------------
 
 def extract_label_html(rendered_html: str, div_id: str, width_px: int, height_px: int) -> str:
-    """Extrahiert den Label‑DIV aus dem vollständigen Template und legt ihn in ein
-    minimalistisches HTML‑Dokument mit exakter Seiten‑/Body‑Größe ab."""
+    """Extrahiert den Label‑Container und setzt ihn in ein Minimal‑HTML."""
 
     soup = BeautifulSoup(rendered_html, "html.parser")
     label_div = soup.find(id=div_id)
