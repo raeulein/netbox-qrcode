@@ -6,7 +6,7 @@ from .template_content_functions import create_text, create_url, config_for_modu
 
 from django.contrib import messages
 from django.template.loader import render_to_string
-from .printing import print_label_from_html, _LABEL_SPECS
+from .printing import print_label_from_html, _get_printer_cfg, _LABEL_SPECS
 
 # ******************************************************************************************
 # Contains the main functionalities of the plugin and thus creates the content for the 
@@ -49,7 +49,9 @@ class QRCode(PluginTemplateExtension):
         if request.GET.get("direct_print") == str(labelDesignNo):
 
             # 1) Labelgröße in Pixel (Mapping der Brother-Bandbreite)
-            _, default_code = _get_printer_cfg()          # already in printing.py
+            p_cfg, default_code = _get_printer_cfg()          # already in printing.py
+            spec = _LABEL_SPECS[default_code]
+            width_px, height_px = (spec, spec * 4) if isinstance(spec, int) else spec
             w_px, h_px = _LABEL_SPECS.get(default_code, (696, 271)) \
                           if isinstance(_LABEL_SPECS.get(default_code), tuple) \
                           else (_LABEL_SPECS[default_code], _LABEL_SPECS[default_code]*4)
