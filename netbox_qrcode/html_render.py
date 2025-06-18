@@ -1,5 +1,6 @@
-import asyncio, os, tempfile
+import os, pathlib, tempfile
 from io import BytesIO
+import asyncio
 from pyppeteer import launch
 
 CACHE_DIR = "/opt/netbox/pyppeteer-cache"
