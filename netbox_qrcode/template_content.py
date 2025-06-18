@@ -6,7 +6,9 @@ from .template_content_functions import create_text, create_url, config_for_modu
 
 from django.contrib import messages
 from django.template.loader import render_to_string
-from .printing import print_label_from_html, _get_printer_cfg, _LABEL_SPECS
+from .printing import (
+    print_label_from_html, _get_printer_cfg, _LABEL_SPECS, extract_label_html
+)
 
 # ******************************************************************************************
 # Contains the main functionalities of the plugin and thus creates the content for the 
@@ -44,38 +46,34 @@ class QRCode(PluginTemplateExtension):
         # Create the text for the label if required.
         text = create_text(config, obj, qrCode)
 
-        # ---------- Direktdruck ----------------------------------------
-        request = self.context["request"]
+        # -------- Direktdruck ----------
         if request.GET.get("direct_print") == str(labelDesignNo):
 
-            # 1) Labelgröße in Pixel (Mapping der Brother-Bandbreite)
-            p_cfg, default_code = _get_printer_cfg()          # already in printing.py
-            spec = _LABEL_SPECS[default_code]
+            # 1) qrcode3.html ganz normal rendern → enthält Card + Label-DIV
+            rendered = render_to_string(
+                "netbox_qrcode/qrcode3.html",
+                {   # alle bisherigen Variablen …
+                    **config,
+                    "object"        : obj,
+                    "labelDesignNo" : labelDesignNo,
+                    "qrCode"        : qrCode,
+                    "text"          : text,
+                },
+                request=request,
+            )
+
+            # 2) Etikett-Breite/Höhe aus Brother-Spec
+            p_cfg, code = _get_printer_cfg()
+            spec        = _LABEL_SPECS[code]
             width_px, height_px = (spec, spec * 4) if isinstance(spec, int) else spec
-            w_px, h_px = _LABEL_SPECS.get(default_code, (696, 271)) \
-                          if isinstance(_LABEL_SPECS.get(default_code), tuple) \
-                          else (_LABEL_SPECS[default_code], _LABEL_SPECS[default_code]*4)
 
-            # 2) Weitere Pixel-Maße aus der YAML-Config umrechnen
-            ctx = {
-                **config,
-                "qrCode"     : qrCode,
-                "text"       : text,
-                "width_px"   : w_px,
-                "height_px"  : h_px,
-                "qr_w_px"    : mm2px(config["label_qr_width"]),
-                "qr_h_px"    : mm2px(config["label_qr_height"]),
-                "qr_dist"    : mm2px(config["label_qr_text_distance"]),
-                "edge_t"     : mm2px(config["label_edge_top"]),
-                "edge_l"     : mm2px(config["label_edge_left"]),
-                "edge_r"     : mm2px(config["label_edge_right"]),
-                "edge_b"     : mm2px(config["label_edge_bottom"]),
-            }
+            # 3) Nur den DIV mit dem Label herausschneiden
+            div_id     = f"QR-Code-Label_{labelDesignNo}"
+            html_label = extract_label_html(rendered, div_id, width_px, height_px)
 
-            html_label = render_to_string("netbox_qrcode/qrcode3_direct.html", ctx)
-
+            # 4) Drucken
             try:
-                print_label_from_html(html_label, default_code)
+                print_label_from_html(html_label, code)
                 messages.success(request, "Label wurde gedruckt.")
             except Exception as exc:
                 messages.error(request, f"Druckfehler: {exc}")

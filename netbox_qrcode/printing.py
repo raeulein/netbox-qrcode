@@ -6,6 +6,7 @@ from brother_ql.conversion import convert
 from brother_ql.backends import backend_factory
 from .html_render import render_html_to_png
 from PIL import Image
+from bs4 import BeautifulSoup
 
 # Pixelmaße bei 300 dpi
 _LABEL_SPECS = {
@@ -45,3 +46,27 @@ def print_label_from_html(html: str, label_code: str | None = None) -> None:
 
     BackendClass = backend_factory(p_cfg["BACKEND"])["backend_class"]
     BackendClass(p_cfg["ADDRESS"]).write(instr)
+
+def extract_label_html(rendered_html: str, div_id: str, width_px: int, height_px: int) -> str:
+    """
+    Schneidet aus dem von qrcode3.html gerenderten Code den eigentlichen
+    Label-DIV heraus und packt ihn in ein Mini-HTML-Dokument,
+    dessen <body> exakt die Etikettgröße hat.
+    """
+    soup = BeautifulSoup(rendered_html, "html.parser")
+    label_div = soup.find(id=div_id)
+    if label_div is None:
+        raise RuntimeError(f"DIV #{div_id} nicht gefunden – Template geändert?")
+
+    return f"""<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    @page {{ size:{width_px}px {height_px}px; margin:0 }}
+    html,body {{ width:{width_px}px; height:{height_px}px; margin:0;padding:0 }}
+  </style>
+</head>
+<body>
+{label_div}
+</body>
+</html>"""
