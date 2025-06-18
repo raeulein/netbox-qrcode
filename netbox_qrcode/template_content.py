@@ -23,7 +23,26 @@ class QRCode(PluginTemplateExtension):
     # Parameter:
     #   labelDesignNo: Which label design should be loaded.
     def Create_SubPluginContent(self, labelDesignNo):
-        
+        request = self.context["request"]
+
+        # ➜ Direktdruck?
+        if request.GET.get("direct_print") == str(labelDesignNo):
+            # Nur den eigentlichen Label-Inhalt in HTML umwandeln
+            html_label = render_to_string(
+                "netbox_qrcode/qrcode3_sub_qrcode.html",
+                {
+                    "qrCode": qrCode,                 # wurde unten eh berechnet
+                    "text": text,
+                    **config,                         # alle Layout-Variablen
+                },
+            )
+            try:
+                print_label_from_html(html_label)    # Etikett senden
+                messages.success(request, "Label wurde gedruckt.")
+            except Exception as exc:
+                messages.error(request, f"Druckfehler: {exc}")
+
+
         thisSelf = self
 
         obj = self.context['object'] # An object of the type Device, Rack etc.
