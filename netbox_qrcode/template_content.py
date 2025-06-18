@@ -44,6 +44,11 @@ class QRCode(PluginTemplateExtension):
         # Create the text for the label if required.
         text = create_text(config, obj, qrCode)
 
+        request = self.context['request']
+        if request.GET.get('direct_print') == str(labelDesignNo):
+            print_png(b64_to_stream(qrCode))
+            messages.success(request, f"Label {labelDesignNo} printed successfully.")
+
         # Create plugin using template
         try:
             if version.parse(settings.RELEASE.version).major >= 3:
@@ -112,11 +117,6 @@ class QRCode(PluginTemplateExtension):
                 break
         
         return pluginContent
-    
-if parentSelf.context['request'].GET.get('direct_print') == str(labelDesignNo):
-    print_png(b64_to_stream(qrCode))          # Send the QR code to the printer
-    messages.success(parentSelf.context['request'],
-                        f"Label {labelDesignNo} printed")
     
 ##################################
 # The following section serves to integrate the plugin into Netbox Core.
