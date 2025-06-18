@@ -1,6 +1,6 @@
 from io import BytesIO
 from PIL import Image
-from netbox.plugins import get_plugin_config
+from netbox.plugins.utils import get_plugin_config
 from brother_ql import BrotherQLRaster
 from brother_ql.conversion import convert
 from brother_ql.backends import backend_factory
@@ -35,10 +35,11 @@ def _prepare_image(raw_png: BytesIO, label_code: str) -> BytesIO:
     return out
 
 def print_png(image: BytesIO, label_size: str | None = None):
-    cfg     = get_plugin_config("netbox_qrcode")
-    p_key   = cfg["DEFAULT_PRINTER"]
-    p_cfg   = cfg["PRINTERS"][p_key]
-    label   = label_size or cfg["DEFAULT_LABEL_SIZE"]
+    cfg       = get_plugin_config("netbox_qrcode", None, {})
+    printers  = get_plugin_config("netbox_qrcode", "PRINTERS", {})
+    p_key    = get_plugin_config("netbox_qrcode", "DEFAULT_PRINTER", next(iter(printers), None))
+    p_cfg    = printers.get(p_key, {})
+    label = label_size or get_plugin_config("netbox_qrcode", "DEFAULT_LABEL_SIZE", "62")
 
     img_prepared = _prepare_image(image, label)
 
