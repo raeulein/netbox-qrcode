@@ -46,6 +46,8 @@ class QRCode(PluginTemplateExtension):
         # Create the text for the label if required.
         text = create_text(config, obj, qrCode)
 
+        request = self.context['request'] 
+
         # -------- Direktdruck ----------
         if request.GET.get("direct_print") == str(labelDesignNo):
 
