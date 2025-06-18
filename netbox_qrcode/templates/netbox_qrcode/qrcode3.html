@@ -167,3 +167,12 @@
         </a>
     </div>
 </div>
+<script>
+(function () {
+    const url = new URL(window.location);
+    if (url.searchParams.has('direct_print')) {
+        url.searchParams.delete('direct_print');
+        window.history.replaceState({}, '', url);
+    }
+})();
+</script>
