@@ -5,7 +5,6 @@ from netbox.plugins import PluginTemplateExtension
 from .template_content_functions import create_text, create_url, config_for_modul, create_QRCode
 
 from django.contrib import messages
-from django.template.loader import render_to_string
 from .printing import print_label_from_html
 
 # ******************************************************************************************
@@ -46,10 +45,6 @@ class QRCode(PluginTemplateExtension):
 
         request = self.context["request"]
         if request.GET.get("direct_print") == str(labelDesignNo):
-            label_html = render_to_string('netbox_qrcode/qrcode3.html', {
-                **self.context,
-                "direct_print": False,
-            })
             print_label_from_html(label_html, config.get("label_code"))
             messages.success(request, f"Label {labelDesignNo} printed successfully.")
 

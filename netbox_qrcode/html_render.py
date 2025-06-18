@@ -1,17 +1,32 @@
-# netbox_qrcode/html_render.py
+import asyncio, os, tempfile
 from io import BytesIO
-from html2image import Html2Image
+from pyppeteer import launch
+
+
+async def _a_render(html: str, width: int, height: int) -> BytesIO:
+    # temporäre HTML-Datei anlegen
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".html")
+    tmp.write(html.encode("utf-8"))
+    tmp.close()
+
+    browser = await launch(  # pyppeteer lädt beim ersten Aufruf Chromium nach ~/.pyppeteer
+        headless=True,
+        args=["--no-sandbox", "--font-render-hinting=medium"],
+    )
+    page = await browser.newPage()
+    await page.setViewport({"width": width, "height": height, "deviceScaleFactor": 1})
+    await page.goto(f"file://{tmp.name}")
+    png_bytes = await page.screenshot(fullPage=False)
+    await browser.close()
+
+    os.unlink(tmp.name)
+    return BytesIO(png_bytes)
 
 
 def render_html_to_png(html: str, width: int, height: int) -> BytesIO:
-
-    hti = Html2Image(
-        size=(width, height),
-        browser_executable=None,   # None ⇒ auto-detect / auto-download
-        download=True,             # <-- wichtig!
-        cache_path="/opt/netbox/hti_cache"  # beliebiger Schreibpfad
-    )
-
-    file_path = hti.screenshot(html_str=html, save_as="label_tmp.png")[0]
-    with open(file_path, "rb") as f:
-        return BytesIO(f.read())
+    """
+    Rendert den HTML-String exakt in width×height px
+    und gibt einen BytesIO-Stream (PNG) zurück.
+    Der erste Aufruf lädt automatisch eine portable Chromium-Binary (~100 MB).
+    """
+    return asyncio.run(_a_render(html, width, height))

@@ -4,7 +4,7 @@ from netbox.plugins.utils import get_plugin_config
 from brother_ql import BrotherQLRaster
 from brother_ql.conversion import convert
 from brother_ql.backends import backend_factory
-from .html_render import render_html_to_png          #  ←  NEU
+from .html_render import render_html_to_png
 
 # Pixelmaße bei 300 dpi
 _LABEL_SPECS = {
@@ -26,21 +26,20 @@ def _get_printer_cfg() -> tuple[Dict[str, Any], str]:
 
 
 def print_label_from_html(html: str, label_code: str | None = None) -> None:
-    """Rendert HTML → PNG → Brother-Raster → sendet ans Gerät."""
+    """rendert Browser-Layout ➜ Brother-Raster ➜ schickt an Drucker"""
     p_cfg, default_label = _get_printer_cfg()
-    code   = label_code or default_label
+    code = label_code or default_label
 
-    # Breite/Höhe in Pixeln ermitteln
     spec = _LABEL_SPECS[code]
-    if isinstance(spec, int):          # Endlosband
-        w, h = spec, spec * 4          # großzügig; wird automatisch beschnitten
+    if isinstance(spec, int):
+        width, height = spec, spec * 4          # großzügige Höhe bei Endlosband
     else:
-        w, h = spec
+        width, height = spec
 
-    png_stream = render_html_to_png(html, w, h)
+    png_stream = render_html_to_png(html, width, height)
 
     raster = BrotherQLRaster(p_cfg["MODEL"])
-    instr  = convert(raster, [png_stream], label=code, rotate="auto")
+    instr = convert(raster, [png_stream], label=code, rotate="auto")
 
-    backend_cls = backend_factory(p_cfg["BACKEND"])["backend_class"]
-    backend_cls(p_cfg["ADDRESS"]).write(instr)
+    BackendClass = backend_factory(p_cfg["BACKEND"])["backend_class"]
+    BackendClass(p_cfg["ADDRESS"]).write(instr)
