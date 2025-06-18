@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup
 from .html_render import render_html_to_png
 
 # ---------------------------------------------------------------------------
-# Pixelmaße bei 300 dpi – Keys entsprechen Brother-Labelcodes
+# Pixelmaße bei 300 dpi – Keys entsprechen Brother‑Labelcodes
 # ---------------------------------------------------------------------------
 _LABEL_SPECS: dict[str, int | tuple[int, int]] = {
     "12": 106, "29": 306, "38": 413, "50": 554, "54": 590, "62": 696, "102": 1164,
@@ -24,11 +24,10 @@ _LABEL_SPECS: dict[str, int | tuple[int, int]] = {
 
 
 # ---------------------------------------------------------------------------
-# Helper: Lade Druckerkonfiguration aus NetBox settings.py
+# Konfiguration aus den NetBox‑Settings holen
 # ---------------------------------------------------------------------------
 
 def _get_printer_cfg() -> tuple[Dict[str, Any], str]:
-    """Liest das PRINTER‑Dict, den Default‑Key und den Default‑Labelcode."""
     printers = get_plugin_config("netbox_qrcode", "PRINTERS", {})
     default_key = get_plugin_config(
         "netbox_qrcode", "DEFAULT_PRINTER", next(iter(printers), None)
@@ -38,74 +37,68 @@ def _get_printer_cfg() -> tuple[Dict[str, Any], str]:
 
 
 # ---------------------------------------------------------------------------
-# Hauptfunktion: HTML‑Fragment direkt auf Brother‑QL drucken
+#   Hauptfunktion: HTML → Brother‑QL‑Druck
 # ---------------------------------------------------------------------------
 
 def print_label_from_html(html: str, label_code: str | None = None) -> None:
-    """Rendert *html* in 96 dpi → skaliert es auf native 300 dpi → rotiert
-    »quer« (falls nötig) → sendet Rasterdaten an den Brother‑Drucker.
-    
-    * label_code – einer der Keys aus ``_LABEL_SPECS``; fällt auf Plugin‑Default
-      zurück, falls *None* übergeben wird.
-    """
-    # ----------------------------------------------------
-    # 1) Drucker‑ und Labelparameter bestimmen
-    p_cfg, default_code = _get_printer_cfg()
-    code = label_code or default_code
+    """Rendert HTML in ein PNG, skaliert/rotiert es und sendet es zum Drucker."""
 
-    spec = _LABEL_SPECS[code]
-    if isinstance(spec, int):
-        width_lbl, height_lbl = spec, spec * 4  # Endlosband: 1 Dot Breite = 4 Dots Höhe
-    else:
-        width_lbl, height_lbl = spec
+    # 1) Drucker‑ und Label‑Spezifikation ermitteln
+    p_cfg, default_label = _get_printer_cfg()
+    code = label_code or default_label
 
-    # ----------------------------------------------------
-    # 2) HTML → Pillow‑Bild (WeasyPrint rendert mit 96 dpi)
-    img: Image.Image = render_html_to_png(html, width_lbl, height_lbl)
+    try:
+        spec = _LABEL_SPECS[code]
+    except KeyError as exc:
+        raise RuntimeError(f"Unbekannter Label‑Code '{code}'.") from exc
 
-    # ----------------------------------------------------
-    # 3) Hochskalieren auf native 300 dpi des Geräts
-    raster = BrotherQLRaster(p_cfg["MODEL"])
-    native_w = raster.canvas_width               # z. B. 696 Dots bei 62 mm‑Band
-    scale = native_w / img.width                 # ≈ 300 / 96 ≈ 3,125
-    if scale != 1:
-        native_h = int(img.height * scale)
-        img = img.resize((native_w, native_h), Image.LANCZOS)
+    if isinstance(spec, int):               # Endlosband
+        width_px, height_px = spec, spec * 4
+    else:                                   # Vorgestanztes Etikett
+        width_px, height_px = spec
 
-    # ----------------------------------------------------
-    # 4) Bild ggf. um 90° drehen (Querformat)
-    if img.width < img.height:
+    # 2) HTML → Pillow‑Bild (WeasyPrint liefert 96 dpi)
+    img: Image.Image = render_html_to_png(html, width_px, height_px)
+
+    # 3) Wenn das Bild schmaler als das Band ist, fehlende Auflösung hochskalieren.
+    #    (canvas_width war in älteren brother_ql‑Versionen nicht vorhanden.)
+    if img.width < width_px:
+        scale = width_px / img.width
+        new_size = (width_px, int(img.height * scale))
+        img = img.resize(new_size, Image.LANCZOS)
+
+    # 4) Für querformatige Etiketten (Breite > Höhe) muss das Bild gedreht werden,
+    #    wenn es noch hochkant ist.
+    if img.height > img.width:
         img = img.rotate(90, expand=True)
 
-    # ----------------------------------------------------
-    # 5) Rasterdaten erzeugen & an Drucker schicken
-    instr = convert(raster, [img], label=code, rotate="0")  # bereits gedreht
+    # 5) In Brother‑Raster wandeln und schicken
+    raster = BrotherQLRaster(p_cfg["MODEL"])
+    instr = convert(raster, [img], label=code, rotate="0")  # bereits korrekt orientiert
+
     backend_cls = backend_factory(p_cfg["BACKEND"])["backend_class"]
     backend_cls(p_cfg["ADDRESS"]).write(instr)
 
 
 # ---------------------------------------------------------------------------
-# HTML‑Schnipsel aus qrcode3.html herauslösen, um ihn 1:1 zu drucken
+#   HTML‑Snippet aus qrcode3.html herauslösen
 # ---------------------------------------------------------------------------
 
 def extract_label_html(rendered_html: str, div_id: str, width_px: int, height_px: int) -> str:
-    """Schneidet den DIV *div_id* aus *rendered_html* heraus und packt ihn in
-    ein minimales HTML‑Dokument mit exakt *width_px*×*height_px* großen Body.
-    """
+    """Extrahiert den Label‑DIV aus dem vollständigen Template und legt ihn in ein
+    minimalistisches HTML‑Dokument mit exakter Seiten‑/Body‑Größe ab."""
+
     soup = BeautifulSoup(rendered_html, "html.parser")
     label_div = soup.find(id=div_id)
     if label_div is None:
-        raise RuntimeError(f"DIV #{div_id} nicht gefunden – Template geändert?")
+        raise RuntimeError(f"DIV #{div_id} nicht gefunden – Template evtl. geändert?")
 
-    return f"""<!DOCTYPE html>
-<html>
-<head>
-  <style>
-    @page {{ size:{width_px}px {height_px}px; margin:0 }}
-    html,body {{ width:{width_px}px; height:{height_px}px; margin:0; padding:0 }}
-  </style>
-</head>
-<body>
-{label_div}
-</body>
-</html>"""
+    return (
+        "<!DOCTYPE html>\n"
+        "<html><head><style>"
+        f"@page {{ size:{width_px}px {height_px}px; margin:0 }}"
+        f"html,body {{ width:{width_px}px; height:{height_px}px; margin:0;padding:0 }}"
+        "</style></head><body>"
+        f"{label_div}"  # bereits gerenderter HTML‑Code
+        "</body></html>"
+    )
