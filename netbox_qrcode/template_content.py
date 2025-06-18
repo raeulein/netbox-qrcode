@@ -46,7 +46,12 @@ class QRCode(PluginTemplateExtension):
 
         request = self.context['request']
         if request.GET.get('direct_print') == str(labelDesignNo):
-            print_png(b64_to_stream(qrCode))
+            print_png(
+                b64_to_stream(qrCode),                 
+                label_size=config.get('label_code'),   
+                text=text,                             
+                cfg_override=config                    
+            )
             messages.success(request, f"Label {labelDesignNo} printed successfully.")
 
         # Create plugin using template
