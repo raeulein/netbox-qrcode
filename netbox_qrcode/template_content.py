@@ -2,11 +2,11 @@ from packaging import version
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from netbox.plugins import PluginTemplateExtension
-from .template_content_functions import create_text, create_url, config_for_modul, create_QRCode
+from .template_content_functions import create_text, create_url, config_for_modul, create_QRCode, mm2px
 
 from django.contrib import messages
 from django.template.loader import render_to_string
-from .printing import print_label_from_html
+from .printing import print_label_from_html, _LABEL_SPECS
 
 # ******************************************************************************************
 # Contains the main functionalities of the plugin and thus creates the content for the 
@@ -44,21 +44,36 @@ class QRCode(PluginTemplateExtension):
         # Create the text for the label if required.
         text = create_text(config, obj, qrCode)
 
+        # ---------- Direktdruck ----------------------------------------
         request = self.context["request"]
-
-        # ➜ Direktdruck?
         if request.GET.get("direct_print") == str(labelDesignNo):
-            # Nur den eigentlichen Label-Inhalt in HTML umwandeln
-            html_label = render_to_string(
-                "netbox_qrcode/qrcode3.html",
-                {
-                    "qrCode": qrCode,                 # wurde unten eh berechnet
-                    "text": text,
-                    **config,                         # alle Layout-Variablen
-                },
-            )
+
+            # 1) Labelgröße in Pixel (Mapping der Brother-Bandbreite)
+            _, default_code = _get_printer_cfg()          # already in printing.py
+            w_px, h_px = _LABEL_SPECS.get(default_code, (696, 271)) \
+                          if isinstance(_LABEL_SPECS.get(default_code), tuple) \
+                          else (_LABEL_SPECS[default_code], _LABEL_SPECS[default_code]*4)
+
+            # 2) Weitere Pixel-Maße aus der YAML-Config umrechnen
+            ctx = {
+                **config,
+                "qrCode"     : qrCode,
+                "text"       : text,
+                "width_px"   : w_px,
+                "height_px"  : h_px,
+                "qr_w_px"    : mm2px(config["label_qr_width"]),
+                "qr_h_px"    : mm2px(config["label_qr_height"]),
+                "qr_dist"    : mm2px(config["label_qr_text_distance"]),
+                "edge_t"     : mm2px(config["label_edge_top"]),
+                "edge_l"     : mm2px(config["label_edge_left"]),
+                "edge_r"     : mm2px(config["label_edge_right"]),
+                "edge_b"     : mm2px(config["label_edge_bottom"]),
+            }
+
+            html_label = render_to_string("netbox_qrcode/qrcode3_direct.html", ctx)
+
             try:
-                print_label_from_html(html_label)    # Etikett senden
+                print_label_from_html(html_label, default_code)
                 messages.success(request, "Label wurde gedruckt.")
             except Exception as exc:
                 messages.error(request, f"Druckfehler: {exc}")

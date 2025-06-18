@@ -1,0 +1,51 @@
+{#  -------- netbox_qrcode/qrcode3_direct.html --------  #}
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    @page { size: {{width_px}}px {{height_px}}px; margin:0 }
+    html,body{ margin:0;padding:0;width:{{width_px}}px;height:{{height_px}}px }
+    .lbl{ position:relative; width:100%; height:100%; overflow:hidden }
+    .txt{ position:absolute; font-family:{{font}}; font-size:{{font_size}};
+          font-weight:{{font_weight}}; color:{{font_color}};
+          display:flex; justify-content:{{text_align_horizontal}};
+          align-items:{{text_align_vertical}} }
+  </style>
+</head>
+<body>
+  <div class="lbl">
+      {# ---------- QR-Code ---------- #}
+      {% if with_qr %}
+        <img src="data:image/png;base64,{{qrCode}}"
+             style="position:absolute;
+                    width:{{qr_w_px}}px; height:{{qr_h_px}}px;
+                    {% if text_location=='right' %}left:0;top:{{edge_t}}px;
+                    {% elif text_location=='left' %}right:0;top:{{edge_t}}px;
+                    {% elif text_location=='top' %}top:0;left:50%;transform:translateX(-50%);
+                    {% else %}bottom:0;left:50%;transform:translateX(-50%);{% endif %}">
+      {% endif %}
+
+      {# ---------- Text ---------- #}
+      {% if with_text %}
+        <div class="txt"
+             style="{% if text_location=='right' %}
+                        left:{{qr_w_px + qr_dist}}px; top:{{edge_t}}px;
+                        width:calc(100% - {{qr_w_px + qr_dist + edge_l + edge_r}}px);
+                        height:calc(100% - {{edge_t + edge_b}}px);
+                    {% elif text_location=='left' %}
+                        right:{{qr_w_px + qr_dist}}px; top:{{edge_t}}px;
+                        width:calc(100% - {{qr_w_px + qr_dist + edge_l + edge_r}}px);
+                        height:calc(100% - {{edge_t + edge_b}}px);
+                    {% elif text_location=='top' %}
+                        top:{{qr_h_px + qr_dist}}px; left:{{edge_l}}px;
+                        width:calc(100% - {{edge_l + edge_r}}px);
+                    {% else %}
+                        bottom:{{qr_dist}}px; left:{{edge_l}}px;
+                        width:calc(100% - {{edge_l + edge_r}}px);
+                    {% endif %}">
+            {{ text|safe|escape }}
+        </div>
+      {% endif %}
+  </div>
+</body>
+</html>
