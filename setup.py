@@ -42,7 +42,7 @@ setup(
         'qrcode',
         'Pillow',
         "brother_ql @ git+https://github.com/re-gmbh/brother_ql@master#egg=brother_ql",
-        'weasyprint',
+        "weasyprint>=63.0",
     ],
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
