@@ -50,7 +50,7 @@ class QRCode(PluginTemplateExtension):
         if request.GET.get("direct_print") == str(labelDesignNo):
             # Nur den eigentlichen Label-Inhalt in HTML umwandeln
             html_label = render_to_string(
-                "netbox_qrcode/qrcode3_sub_qrcode.html",
+                "netbox_qrcode/qrcode3.html",
                 {
                     "qrCode": qrCode,                 # wurde unten eh berechnet
                     "text": text,
