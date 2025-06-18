@@ -3,7 +3,7 @@ from PIL import Image
 from netbox.plugins import get_plugin_config
 from brother_ql import BrotherQLRaster
 from brother_ql.conversion import convert
-from brother_ql.backends.helpers import choose_backend
+from brother_ql.backends import backend_factory
 
 
 # Pixel-Measurements (300 dpi)
@@ -45,6 +45,7 @@ def print_png(image: BytesIO, label_size: str | None = None):
     qlr = BrotherQLRaster(p_cfg["MODEL"])
     instr = convert(qlr, [img_prepared], label=label, rotate="0")
     
-    backend_factory = choose_backend(p_cfg["BACKEND"])   # e.g. "network"
-    backend         = backend_factory(p_cfg["ADDRESS"])  # tcp://… or usb://…
-    backend.write(instr)
+    be_info       = backend_factory(p_cfg["BACKEND"])
+    BackendClass  = be_info["backend_class"]
+    backend_obj   = BackendClass(p_cfg["ADDRESS"])
+    backend_obj.write(instr)
