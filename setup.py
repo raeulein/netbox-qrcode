@@ -43,6 +43,7 @@ setup(
         'Pillow',
         "brother_ql @ git+https://github.com/re-gmbh/brother_ql@master#egg=brother_ql",
         "weasyprint>=63.0",
+        "pypdfium2>=4.0.0",
     ],
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',

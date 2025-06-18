@@ -1,31 +1,58 @@
+"""
+HTML-Fragment → Pillow-Image
+
+Funktioniert mit *allen* WeasyPrint-Versionen:
+•  ≤ 52       :  HTML.write_png()
+•  53 – 57    :  Document.write_png()
+•  ≥ 58       :  PDF-Umweg + pypdfium2.render_topil()
+"""
+
 from io import BytesIO
+from typing import Tuple
 from PIL import Image
 
-def render_html_to_png(html: str, width_px: int, height_px: int) -> Image.Image:
-    from weasyprint import HTML, CSS
 
-    css = CSS(string=f"""
-        @page {{ size:{width_px}px {height_px}px; margin:0 }}
-        html,body {{ width:{width_px}px; height:{height_px}px; margin:0 }}
-    """)
+def render_html_to_png(html: str, width_px: int, height_px: int) -> Image.Image:
+    from weasyprint import HTML, CSS                       # Laufzeit-Import
+
+    css = CSS(
+        string=f"""
+            @page {{ size:{width_px}px {height_px}px; margin:0 }}
+            html,body {{ width:{width_px}px; height:{height_px}px; margin:0 }}
+        """
+    )
     html_obj = HTML(string=html)
 
-    # Weg 1 – neue API (≥53)
+    # ──────────────────────────────────────────────────────────────
+    # 1) WeasyPrint ≤ 52  → HTML.write_png() existiert noch
     if hasattr(html_obj, "write_png"):
-        png_bytes = html_obj.write_png(stylesheets=[css])
+        png_bytes: bytes = html_obj.write_png(stylesheets=[css])
 
-    # Weg 2 – halb-neue API (0.53 – 0.52)
+    # 2) WeasyPrint 53-57 → Document.write_png()
     else:
         doc = html_obj.render(stylesheets=[css])
         if hasattr(doc, "write_png"):
-            png_bytes = doc.write_png()
-        # Weg 3 – Steinzeit-API (0.42 – 0.51)
+            png_bytes: bytes = doc.write_png()
+        # 3) WeasyPrint ≥ 58 → Kein PNG-Support mehr ⇒ PDF → PNG
         else:
-            # Erste Seite herauspicken und per Cairo in PNG schreiben
-            page = doc.pages[0]
-            surface, _ = page.paint(dpi=96)
-            buf = BytesIO()
-            surface.write_to_png(buf)     # cairo.Surface-Methode
-            png_bytes = buf.getvalue()
+            try:
+                import pypdfium2 as pdfium                # pip-only!
+            except ModuleNotFoundError as exc:
+                raise RuntimeError(
+                    "WeasyPrint ≥58 liefert nur noch PDF. "
+                    "Installiere pypdfium2 (`pip install pypdfium2`) "
+                    "oder nutze WeasyPrint ≤52."
+                ) from exc
 
+            pdf_bytes: bytes = html_obj.write_pdf(stylesheets=[css])
+            pdf = pdfium.PdfDocument(pdf_bytes)
+
+            page = pdf.get_page(0)
+            # Skalierung so wählen, dass die Breite passt
+            pdf_w, _ = page.get_size()
+            scale = width_px / pdf_w
+            pil_image = page.render_topil(scale=scale)
+            return pil_image
+
+    # PNG-Bytes → Pillow-Image
     return Image.open(BytesIO(png_bytes))
