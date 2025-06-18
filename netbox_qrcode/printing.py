@@ -3,7 +3,8 @@ from PIL import Image
 from netbox.plugins import get_plugin_config
 from brother_ql import BrotherQLRaster
 from brother_ql.conversion import convert
-from brother_ql.backends.network import NetworkBackend
+from brother_ql.backends.helpers import choose_backend
+
 
 # Pixel-Measurements (300 dpi)
 _LABEL_SPECS = {
@@ -43,8 +44,7 @@ def print_png(image: BytesIO, label_size: str | None = None):
 
     qlr = BrotherQLRaster(p_cfg["MODEL"])
     instr = convert(qlr, [img_prepared], label=label, rotate="0")
-
-    if p_cfg["BACKEND"] == "network":
-        NetworkBackend(p_cfg["ADDRESS"]).write(instr)
-    else:
-        raise NotImplementedError(f"Backend {p_cfg['BACKEND']} not supported yet.")
+    
+    backend_factory = choose_backend(p_cfg["BACKEND"])   # e.g. "network"
+    backend         = backend_factory(p_cfg["ADDRESS"])  # tcp://… or usb://…
+    backend.write(instr)
