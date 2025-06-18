@@ -29,3 +29,7 @@ def get_img_b64(img):
     stream = BytesIO()
     img.save(stream, format='png')
     return str(base64.b64encode(stream.getvalue()), encoding='ascii')
+
+def b64_to_stream(b64_png: str) -> BytesIO:
+    """Base64-PNG -> BytesIO (für printing.print_png)."""
+    return BytesIO(base64.b64decode(b64_png))

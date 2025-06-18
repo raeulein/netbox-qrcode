@@ -159,8 +159,11 @@
     </div>
 
     <div class="card-footer text-end noprint">
-        <button onclick="printPageArea('QRCode_PrintArea_{{labelDesignNo}}')" ; class="btn btn-xs btn-primary">
-            <span class="mdi mdi-printer" aria-hidden="true"></span> Print
+        <button onclick="printPageArea('QRCode_PrintArea_{{labelDesignNo}}')" ...>
+            <span class="mdi mdi-printer"></span> Print
         </button>
+        <a href="?direct_print={{labelDesignNo}}" class="btn btn-xs btn-success">
+            <span class="mdi mdi-printer-wireless"></span> Print Directly
+        </a>
     </div>
 </div>

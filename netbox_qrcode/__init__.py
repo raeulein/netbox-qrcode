@@ -107,6 +107,18 @@ class QRCodeConfig(PluginConfig):
         'module': {
         },   
         'logo': '',
+
+        "PRINTERS": {
+            "default": {
+                "BACKEND":  "network",
+                "ADDRESS":  "tcp://192.168.48.201:9100",
+                "MODEL":    "QL-710W"
+            }
+        },
+        "DEFAULT_PRINTER": "default",
+        "DEFAULT_LABEL_SIZE": "62x100",
+
+
     }
 
 config = QRCodeConfig # noqa E305

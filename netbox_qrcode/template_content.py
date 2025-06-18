@@ -4,6 +4,10 @@ from django.core.exceptions import ObjectDoesNotExist
 from netbox.plugins import PluginTemplateExtension
 from .template_content_functions import create_text, create_url, config_for_modul, create_QRCode
 
+from django.contrib import messages
+from .utilities import b64_to_stream
+from .printing import print_png
+
 # ******************************************************************************************
 # Contains the main functionalities of the plugin and thus creates the content for the 
 # individual modules, e.g: Device, Rack etc.
@@ -46,6 +50,7 @@ class QRCode(PluginTemplateExtension):
 
                 render = self.render(
                     'netbox_qrcode/qrcode3.html', extra_context={
+                                                                    'object': obj,
                                                                     'title': config.get('title'),
                                                                     'labelDesignNo': labelDesignNo,
                                                                     'qrCode': qrCode, 
@@ -107,7 +112,12 @@ class QRCode(PluginTemplateExtension):
                 break
         
         return pluginContent
-
+    
+if parentSelf.context['request'].GET.get('direct_print') == str(labelDesignNo):
+    print_png(b64_to_stream(qrCode))          # Send the QR code to the printer
+    messages.success(parentSelf.context['request'],
+                        f"Label {labelDesignNo} printed")
+    
 ##################################
 # The following section serves to integrate the plugin into Netbox Core.
         
