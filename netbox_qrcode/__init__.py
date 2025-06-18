@@ -1,7 +1,5 @@
 from netbox.plugins import PluginConfig
 from .version import __version__
-import os, pathlib, tempfile
-from django.conf import settings
 
 
 class QRCodeConfig(PluginConfig):
@@ -124,18 +122,3 @@ class QRCodeConfig(PluginConfig):
     }
 
 config = QRCodeConfig # noqa E305
-
-def _prepare_pyppeteer_cache():
-    cache_dir = (
-        getattr(settings, "PYPPETEER_CACHE_DIR", None)
-        or (os.path.join(settings.MEDIA_ROOT, "pyppeteer") if settings.MEDIA_ROOT else None)
-        or os.path.join(tempfile.gettempdir(), f"pyppeteer-{os.getuid()}")
-    )
-
-    pathlib.Path(cache_dir).mkdir(parents=True, exist_ok=True)
-    os.environ.setdefault("PYPPETEER_HOME", cache_dir)
-    # viele Libraries rufen expanduser('~') auf → HOME umbiegen
-    if not os.environ.get("HOME") or os.environ["HOME"] == "/nonexistent":
-        os.environ["HOME"] = cache_dir
-
-_prepare_pyppeteer_cache()

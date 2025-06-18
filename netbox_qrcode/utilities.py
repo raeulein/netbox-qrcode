@@ -30,18 +30,3 @@ def get_img_b64(img):
     stream = BytesIO()
     img.save(stream, format='png')
     return str(base64.b64encode(stream.getvalue()), encoding='ascii')
-
-def b64_to_stream(b64_png: str) -> BytesIO:
-    """Base64-PNG -> BytesIO (für printing.print_png)."""
-    return BytesIO(base64.b64decode(b64_png))
-
-def b64_to_img(b64_png: str) -> Image.Image:
-    """Base64-PNG -> PIL-Image."""
-    return Image.open(BytesIO(base64.b64decode(b64_png)))
-
-def img_to_stream(img: Image.Image) -> BytesIO:
-    """PIL-Image -> BytesIO (PNG)."""
-    buf = BytesIO()
-    img.save(buf, format="PNG")
-    buf.seek(0)
-    return buf

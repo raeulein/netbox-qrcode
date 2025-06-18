@@ -5,6 +5,7 @@ from brother_ql import BrotherQLRaster
 from brother_ql.conversion import convert
 from brother_ql.backends import backend_factory
 from .html_render import render_html_to_png
+from PIL import Image
 
 # Pixelmaße bei 300 dpi
 _LABEL_SPECS = {
@@ -36,10 +37,11 @@ def print_label_from_html(html: str, label_code: str | None = None) -> None:
     else:
         width, height = spec
 
-    png_stream = render_html_to_png(html, width, height)
+    img = render_html_to_png(html, width, height)   # PIL.Image.Image
 
+    # 2. An Brother-QL-Treiber übergeben
     raster = BrotherQLRaster(p_cfg["MODEL"])
-    instr = convert(raster, [png_stream], label=code, rotate="auto")
+    instr  = convert(raster, [img], label=code, rotate="auto")
 
     BackendClass = backend_factory(p_cfg["BACKEND"])["backend_class"]
     BackendClass(p_cfg["ADDRESS"]).write(instr)

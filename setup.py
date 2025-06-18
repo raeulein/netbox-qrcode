@@ -40,9 +40,9 @@ setup(
     },
     install_requires=[
         'qrcode',
-        'pyppeteer',
         'Pillow',
         "brother_ql @ git+https://github.com/re-gmbh/brother_ql@master#egg=brother_ql",
+        'weasyprint'
     ],
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',

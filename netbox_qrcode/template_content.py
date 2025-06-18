@@ -44,22 +44,6 @@ class QRCode(PluginTemplateExtension):
         # Create the text for the label if required.
         text = create_text(config, obj, qrCode)
 
-        request = self.context['request']
-        if request.GET.get('direct_print') == str(labelDesignNo):
-            # 1) HTML exakt so bauen, wie es der Browser anzeigt
-            label_html = render_to_string(
-                'netbox_qrcode/qrcode3.html',
-                {**self.context,
-                 'object': obj,
-                 'qrCode': qrCode,
-                 'text': text,
-                 'labelDesignNo': labelDesignNo,
-                 'direct_print': False}
-            )
-
-            print_label_from_html(label_html, config.get('label_code'))
-            messages.success(request, f"Label {labelDesignNo} printed successfully.")
-
         # Create plugin using template
         try:
             if version.parse(settings.RELEASE.version).major >= 3:
