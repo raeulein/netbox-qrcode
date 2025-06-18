@@ -5,8 +5,8 @@ from netbox.plugins import PluginTemplateExtension
 from .template_content_functions import create_text, create_url, config_for_modul, create_QRCode
 
 from django.contrib import messages
-from .utilities import b64_to_stream
-from .printing import print_png
+from django.template.loader import render_to_string
+from .printing import print_label_from_html
 
 # ******************************************************************************************
 # Contains the main functionalities of the plugin and thus creates the content for the 
@@ -44,14 +44,13 @@ class QRCode(PluginTemplateExtension):
         # Create the text for the label if required.
         text = create_text(config, obj, qrCode)
 
-        request = self.context['request']
-        if request.GET.get('direct_print') == str(labelDesignNo):
-            print_png(
-                b64_to_stream(qrCode),                 
-                label_size=config.get('label_code'),   
-                text=text,                             
-                cfg_override=config                    
-            )
+        request = self.context["request"]
+        if request.GET.get("direct_print") == str(labelDesignNo):
+            label_html = render_to_string('netbox_qrcode/qrcode3.html', {
+                **self.context,
+                "direct_print": False,
+            })
+            print_label_from_html(label_html, config.get("label_code"))
             messages.success(request, f"Label {labelDesignNo} printed successfully.")
 
         # Create plugin using template
