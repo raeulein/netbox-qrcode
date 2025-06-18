@@ -24,35 +24,32 @@ def render_html_to_png(html: str, width_px: int, height_px: int) -> Image.Image:
     html_obj = HTML(string=html)
 
     # ──────────────────────────────────────────────────────────────
-    # 1) WeasyPrint ≤ 52  → HTML.write_png() existiert noch
-    if hasattr(html_obj, "write_png"):
-        png_bytes: bytes = html_obj.write_png(stylesheets=[css])
+    try:
+        import pypdfium2 as pdfium              # reines pip-Rad
+    except ModuleNotFoundError as exc:
+        raise RuntimeError(
+            "WeasyPrint ≥58 liefert nur noch PDF.  "
+            "Installiere pypdfium2 (`pip install pypdfium2`) "
+            "oder setze WeasyPrint <58 ein."
+        ) from exc
 
-    # 2) WeasyPrint 53-57 → Document.write_png()
+    pdf_bytes = html_obj.write_pdf(stylesheets=[css])
+    pdf       = pdfium.PdfDocument(pdf_bytes)
+
+    page      = pdf.get_page(0)
+    pdf_w, _  = page.get_size()
+    scale     = width_px / pdf_w                # Faktor → Zielbreite
+
+    # ---------- neue API (pypdfium2 ≥ 4) ----------
+    if hasattr(page, "render"):
+        bitmap    = page.render(scale=scale)
+        pil_image = bitmap.to_pil()
+
+    # ---------- alte API (pypdfium2 2/3) ----------
     else:
-        doc = html_obj.render(stylesheets=[css])
-        if hasattr(doc, "write_png"):
-            png_bytes: bytes = doc.write_png()
-        # 3) WeasyPrint ≥ 58 → Kein PNG-Support mehr ⇒ PDF → PNG
-        else:
-            try:
-                import pypdfium2 as pdfium                # pip-only!
-            except ModuleNotFoundError as exc:
-                raise RuntimeError(
-                    "WeasyPrint ≥58 liefert nur noch PDF. "
-                    "Installiere pypdfium2 (`pip install pypdfium2`) "
-                    "oder nutze WeasyPrint ≤52."
-                ) from exc
+        # Bis v3 gab es Helferfunktion render_pdf_topil()
+        pil_image = pdfium.render_pdf_topil(
+            pdf_bytes, page_indices=[0], scale=scale
+        )[0]
 
-            pdf_bytes: bytes = html_obj.write_pdf(stylesheets=[css])
-            pdf = pdfium.PdfDocument(pdf_bytes)
-
-            page = pdf.get_page(0)
-            # Skalierung so wählen, dass die Breite passt
-            pdf_w, _ = page.get_size()
-            scale = width_px / pdf_w
-            pil_image = page.render_topil(scale=scale)
-            return pil_image
-
-    # PNG-Bytes → Pillow-Image
-    return Image.open(BytesIO(png_bytes))
+    return pil_image
