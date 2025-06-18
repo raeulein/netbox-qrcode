@@ -2,6 +2,12 @@ import asyncio, os, tempfile
 from io import BytesIO
 from pyppeteer import launch
 
+CACHE_DIR = "/opt/netbox/pyppeteer-cache"
+pathlib.Path(CACHE_DIR).mkdir(parents=True, exist_ok=True)
+os.environ.setdefault("PYPPETEER_HOME", CACHE_DIR)
+os.environ.setdefault("HOME", CACHE_DIR)
+
+
 
 async def _a_render(html: str, width: int, height: int) -> BytesIO:
     # temporäre HTML-Datei anlegen
