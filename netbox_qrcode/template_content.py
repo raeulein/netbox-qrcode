@@ -33,22 +33,6 @@ class QRCode(PluginTemplateExtension):
         # Config suitable for the module
         config = config_for_modul(thisSelf, labelDesignNo)
 
-        # -------- Maße von mm → px (300 dpi) umrechnen ----------------------
-        # Alle in der HTML-Vorlage verwendeten Längenangaben sollen bereits
-        # als absolute Pixelwerte (300 dpi) ankommen, damit WeasyPrint nicht
-        # mehr in 96-dpi-CSS-Einheiten umrechnen muss.
-        _mm_keys = (
-            'label_qr_width', 'label_qr_height', 'label_qr_text_distance',
-            'label_width', 'label_height',
-            'label_edge_top', 'label_edge_left', 'label_edge_right',
-            'label_edge_bottom', 'font_size',
-        )
-        for _k in _mm_keys:
-            _v = config.get(_k)
-            if isinstance(_v, str) and _v.endswith('mm'):
-                config[_k] = f'{mm2px(_v)}px'
-
-
         # Abort if no config data. 
         if config is None: 
             return '' 

@@ -41,42 +41,24 @@ def _get_printer_cfg() -> Tuple[Dict[str, Any], str]:
 # ---------------------------------------------------------------------------
 
 def _scale_image_to_label(img: Image.Image, width_px: int, height_px: int) -> Image.Image:
-    """
-    Bringt das Bild auf mindestens 300 dpi.
-    Ist es bereits groß genug, bleibt es unverändert – dadurch
-    geht die zuvor erzeugte höhere Auflösung nicht wieder verloren.
-    """
-    if img.width >= width_px and img.height >= height_px:
-        return img                          # schon groß genug
+    """Bringt das Bild auf die Ziel‑Auflösung (≥ 300 dpi)."""
+    if img.size == (width_px, height_px):
+        return img  # alles passt schon
+
+    # Skalierungsfaktor wählen, so dass beide Seiten ≥ Zielmaß
     scale = max(width_px / img.width, height_px / img.height)
     new_size = (round(img.width * scale), round(img.height * scale))
     return img.resize(new_size, Image.LANCZOS)
 
 
 def _orient_image(img: Image.Image, width_px: int, height_px: int) -> Image.Image:
-    """
-    Dreht das Bild so, dass es dieselbe Ausrichtung wie das Etikett hat.
-    • exakte Pixelmaße → lassen
-    • Breite/Höhe vertauscht → 90 ° drehen
-    • kleine Rundungsabweichung → Seitenverhältnis prüfen und ggf. drehen
-    """
-    # 1) alles passt exakt
+    """Dreht das Bild, falls Breite/Höhe vertauscht sind."""
     if img.size == (width_px, height_px):
         return img
-
-    # 2) typische Vertauschung (Breite↔Höhe)
     if img.size == (height_px, width_px):
         return img.rotate(90, expand=True)
-
-    # 3) Fallback-Heuristik bei Rundungsfehlern
-    if (width_px < height_px and img.width > img.height) or \
-       (width_px > height_px and img.width < img.height):
-        return img.rotate(90, expand=True)
-
-    # 4) immer noch falsch → deutlicher Fehler
     raise RuntimeError(
-        f"Bad image dimensions after scaling: {img.size}. "
-        f"Expecting {width_px}×{height_px}."
+        f"Bad image dimensions after scaling: {img.size}. Expecting {width_px}×{height_px}."
     )
 
 
@@ -103,11 +85,9 @@ def print_label_from_html(html: str, label_code: str | None = None) -> None:
     # 4) Orientierung prüfen / drehen
     img = _orient_image(img, width_px, height_px)
 
-    # 5) In Brother-Raster wandeln und senden
-    rotation = "90" if height_px > width_px else "0"   # Hochformat-Etiketten drehen
+    # 5) In Brother‑Raster wandeln und senden
     raster = BrotherQLRaster(p_cfg["MODEL"])
-    instr  = convert(raster, [img], label=code, rotate="0")
-
+    instr = convert(raster, [img], label=code, rotate="0")  # bereits korrekt orientiert
 
     backend_cls = backend_factory(p_cfg["BACKEND"])["backend_class"]
     backend_cls(p_cfg["ADDRESS"]).write(instr)
