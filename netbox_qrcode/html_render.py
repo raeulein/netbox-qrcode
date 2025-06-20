@@ -12,7 +12,7 @@ from typing import Tuple
 from PIL import Image
 
 
-def render_html_to_png(html: str, height_px: int, width_px: int) -> Image.Image:
+def render_html_to_png(html: str, width_px: int, height_px: int) -> Image.Image:
     from weasyprint import HTML, CSS                       # Laufzeit-Import
 
     css = CSS(
