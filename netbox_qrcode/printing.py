@@ -103,7 +103,7 @@ def print_label_from_html(html: str, label_code: str | None = None) -> None:
     img = _orient_image(img, width_px, height_px)
 
     # 5) Am Brother erst *jetzt* drehen: Hochformat-Labels → 90 °
-    rotate_mode = "90" if height_px > width_px else "0"
+    rotate_mode = "0"
 
     # 6) In Brother-Raster wandeln und senden
     raster = BrotherQLRaster(p_cfg["MODEL"])
