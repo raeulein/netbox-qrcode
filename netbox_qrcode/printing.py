@@ -37,54 +37,58 @@ def _get_printer_cfg() -> Tuple[Dict[str, Any], str]:
 
 
 # ---------------------------------------------------------------------------
-# Hauptfunktion: HTML → Brother‑QL‑Druck
+# 1) Skalierung auf ≥ 300 dpi
 # ---------------------------------------------------------------------------
-
 def _scale_image_to_label(img: Image.Image, width_px: int, height_px: int) -> Image.Image:
-    """Bringt das Bild auf die Ziel‑Auflösung (≥ 300 dpi)."""
-    if img.size == (width_px, height_px):
-        return img  # alles passt schon
+    """Skaliert das WeasyPrint-PNG so, dass es mindestens 300 dpi erreicht.
 
-    # Skalierungsfaktor wählen, so dass beide Seiten ≥ Zielmaß
-    scale = max(width_px / img.width, height_px / img.height)
+    WeasyPrint rendert CSS-Pixel mit 96 dpi. Brother-QL erwartet ~300 dpi.
+    Wir wählen daher den größten Skalierungsfaktor aus:
+        • geometrische Zielgröße (width_px/height_px) und
+        • dpi-Faktor (300 / Quell-DPI).
+    Schrumpfen (scale < 1) vermeiden wir, um Qualität zu behalten.
+    """
+    dpi_src = img.info.get("dpi", (96, 96))[0] or 96
+    dpi_factor = 300 / dpi_src                   # 3,125 bei 96 dpi
+    geo_factor = max(width_px / img.width, height_px / img.height)
+    scale      = max(dpi_factor, geo_factor, 1)  # nie kleiner als 1
+
+    if scale == 1:
+        return img
+
     new_size = (round(img.width * scale), round(img.height * scale))
     return img.resize(new_size, Image.LANCZOS)
 
-
+# ---------------------------------------------------------------------------
+# 2) Ausrichtung des Bildes
+# ---------------------------------------------------------------------------
 def _orient_image(img: Image.Image, width_px: int, height_px: int) -> Image.Image:
-    """Dreht das Bild, falls Breite/Höhe vertauscht sind."""
-    if img.size == (width_px, height_px):
-        return img
-    if img.size == (height_px, width_px):
+    """Dreht das Bild bei Bedarf um 90 °, damit es im Hochformat zum Drucker passt."""
+    img_landscape  = img.width  > img.height
+    label_landscape = width_px  > height_px
+
+    if img_landscape != label_landscape:
         return img.rotate(90, expand=True)
-    raise RuntimeError(
-        f"Bad image dimensions after scaling: {img.size}. Expecting {width_px}×{height_px}."
-    )
+    return img
 
+# ---------------------------------------------------------------------------
+# 3) rotate-Wert für brother_ql ermitteln
+# ---------------------------------------------------------------------------
+def _rotation_for_printer(width_px: int, height_px: int) -> str:
+    """Gibt den rotate-Parameter (‘0’ oder ‘90’) für brother_ql.convert() zurück."""
+    # Brother-QL erwartet Bilder im Hochformat; sind sie quer, dreht convert() sie.
+    return "90" if width_px > height_px else "0"
 
-def print_label_from_html(html: str, label_code: str | None = None) -> None:
-    """Rendert HTML, skaliert/rotiert es passend und schickt es an den Brother‑Drucker."""
+# ---------------------------------------------------------------------------
+# 4) Hauptfunktion – Abschnitt 5: an brother_ql senden
+# ---------------------------------------------------------------------------
+# 5) In Brother-Raster wandeln und senden
+raster = BrotherQLRaster(p_cfg["MODEL"])
+rotate = _rotation_for_printer(width_px, height_px)
+instr  = convert(raster, [img], label=code, rotate=rotate)
 
-    # 1) Drucker‑ und Label‑Spezifikation ermitteln
-    p_cfg, default_label = _get_printer_cfg()
-    code = label_code or default_label
-
-    try:
-        spec = _LABEL_SPECS[code]
-    except KeyError as exc:
-        raise RuntimeError(f"Unbekannter Label‑Code '{code}'.") from exc
-
-    width_px, height_px = (spec, spec * 4) if isinstance(spec, int) else spec
-
-    # 2) HTML → Pillow (WeasyPrint rendert in 96 dpi → zu klein)
-    img: Image.Image = render_html_to_png(html, width_px, height_px)
-
-    # 3) Auf Ziel‑Auflösung hochskalieren
-    img = _scale_image_to_label(img, width_px, height_px)
-
-    # 4) In Brother‑Raster wandeln und senden
-    raster = BrotherQLRaster(p_cfg["MODEL"])
-    instr = convert(raster, [img], label=code, rotate="auto")
+backend_cls = backend_factory(p_cfg["BACKEND"])["backend_class"]
+backend_cls(p_cfg["ADDRESS"]).write(instr)
 
 
 # ---------------------------------------------------------------------------
