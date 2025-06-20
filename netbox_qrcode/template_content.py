@@ -60,7 +60,9 @@ class QRCode(PluginTemplateExtension):
             # 0) Breite/Höhe des Ziel-Labels in px (Brother-Spezifikation)
             p_cfg, code = _get_printer_cfg()
             spec = _LABEL_SPECS[code]
-            width_px, height_px = (spec, spec * 4) if isinstance(spec, int) else spec
+            #width_px, height_px = (spec, spec * 4) if isinstance(spec, int) else spec
+            
+            width_px, height_px = (spec, spec) if isinstance(spec, int) else spec
 
             # 1) mm-Angaben → px-Strings bei 300 dpi
             def _mm_to_px_str(val):
