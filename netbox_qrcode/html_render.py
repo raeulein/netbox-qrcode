@@ -15,10 +15,20 @@ from PIL import Image
 def render_html_to_png(html: str, width_px: int, height_px: int, want_pdf=False) -> Image.Image:
     from weasyprint import HTML, CSS                       # Laufzeit-Import
 
-    css = CSS(string="""
-        @page { size: auto; margin: 0 }
-        html, body { margin: 0; padding: 0 }
-    """)
+    css = CSS(
+        string=f"""
+            @page {{
+                size: {width_px}px {height_px}px;
+                margin: 0;
+                orientation: landscape;
+            }}
+            html, body {{
+                width: {width_px}px;
+                height: {height_px}px;
+                margin: 0;
+            }}
+        """
+    )
 
 
     html_obj = HTML(string=html)
