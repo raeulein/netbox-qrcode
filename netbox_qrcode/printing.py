@@ -62,19 +62,6 @@ def _scale_image_to_label(img: Image.Image, width_px: int, height_px: int) -> Im
     return bg
 
 
-def _orient_image(img: Image.Image, width_px: int, height_px: int) -> Image.Image:
-    """
-    Dreht das Bild genau dann, wenn Breite und Höhe vertauscht sind – allerdings
-    **im Uhrzeigersinn** (-90 °), weil Pillow positive Winkel gegen den
-    Uhrzeigersinn dreht.  Danach stimmen Abmessungen und Ausrichtung für den
-    Brother-Treiber, so dass `convert(..., rotate="0")` genügt.
-    """
-
-    # Sonderfall: zunächst korrekt einpassen, dann Rekursion
-    img = _scale_image_to_label(img, height_px, width_px)
-    return img.rotate(-90, expand=True)
-
-
 # ---------------------------------------------------------------------------
 # Hauptfunktion: HTML → Brother-QL-Druck
 # ---------------------------------------------------------------------------
@@ -94,11 +81,8 @@ def print_label_from_html(html: str, label_code: str | None = None) -> None:
     # 3) Einpassen (niemals Beschnitt)
     img = _scale_image_to_label(img, width_px, height_px)
 
-    # 4) Original­ausrichtung beibehalten
-    img = _orient_image(img, width_px, height_px)
-
     # 5) Am Brother erst *jetzt* drehen: Hochformat-Labels → 90 °
-    rotate_mode = "0"
+    rotate_mode = "auto"
 
     # 6) In Brother-Raster wandeln und senden
     raster = BrotherQLRaster(p_cfg["MODEL"])
