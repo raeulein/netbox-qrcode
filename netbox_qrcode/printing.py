@@ -54,13 +54,29 @@ def _scale_image_to_label(img: Image.Image, width_px: int, height_px: int) -> Im
 
 
 def _orient_image(img: Image.Image, width_px: int, height_px: int) -> Image.Image:
-    """Dreht das Bild, falls Breite/Höhe vertauscht sind."""
+    """
+    Dreht das Bild so, dass es dieselbe Ausrichtung wie das Etikett hat.
+    • exakte Pixelmaße → lassen
+    • Breite/Höhe vertauscht → 90 ° drehen
+    • kleine Rundungsabweichung → Seitenverhältnis prüfen und ggf. drehen
+    """
+    # 1) alles passt exakt
     if img.size == (width_px, height_px):
         return img
+
+    # 2) typische Vertauschung (Breite↔Höhe)
     if img.size == (height_px, width_px):
         return img.rotate(90, expand=True)
+
+    # 3) Fallback-Heuristik bei Rundungsfehlern
+    if (width_px < height_px and img.width > img.height) or \
+       (width_px > height_px and img.width < img.height):
+        return img.rotate(90, expand=True)
+
+    # 4) immer noch falsch → deutlicher Fehler
     raise RuntimeError(
-        f"Bad image dimensions after scaling: {img.size}. Expecting {width_px}×{height_px}."
+        f"Bad image dimensions after scaling: {img.size}. "
+        f"Expecting {width_px}×{height_px}."
     )
 
 
@@ -90,7 +106,7 @@ def print_label_from_html(html: str, label_code: str | None = None) -> None:
     # 5) In Brother-Raster wandeln und senden
     rotation = "90" if height_px > width_px else "0"   # Hochformat-Etiketten drehen
     raster = BrotherQLRaster(p_cfg["MODEL"])
-    instr  = convert(raster, [img], label=code, rotate=rotation)
+    instr  = convert(raster, [img], label=code, rotate="0")
 
 
     backend_cls = backend_factory(p_cfg["BACKEND"])["backend_class"]
