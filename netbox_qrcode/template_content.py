@@ -51,11 +51,24 @@ class QRCode(PluginTemplateExtension):
         # -------- Direktdruck ----------
         if request.GET.get("direct_print") == str(labelDesignNo):
 
-            # 1) qrcode3.html ganz normal rendern → enthält Card + Label-DIV
+            # mm-Angaben → px-Strings bei 300 dpi
+            def _mm_to_px_str(val):
+                if isinstance(val, str) and val.endswith("mm"):
+                    return f"{mm2px(val)}px"
+                return val
+
+            # komplette Konfiguration in Pixel umrechnen
+            px_cfg = {k: _mm_to_px_str(v) for k, v in config.items()}
+
+            # Labelcontainer auf die exakten Brother-Pixel setzen
+            px_cfg["label_width"]  = f"{width_px}px"
+            px_cfg["label_height"] = f"{height_px}px"
+
+            # 1) qrcode3.html rendern (Card + Label-DIV)
             rendered = render_to_string(
                 "netbox_qrcode/qrcode3.html",
-                {   # alle bisherigen Variablen …
-                    **config,
+                {
+                    **px_cfg,
                     "object"        : obj,
                     "labelDesignNo" : labelDesignNo,
                     "qrCode"        : qrCode,
@@ -63,6 +76,7 @@ class QRCode(PluginTemplateExtension):
                 },
                 request=request,
             )
+
 
             # 2) Etikett-Breite/Höhe aus Brother-Spec
             p_cfg, code = _get_printer_cfg()
