@@ -66,8 +66,10 @@ class QRCode(PluginTemplateExtension):
             width_px, height_px = (
                 (spec, spec * 4) if isinstance(spec, int) else spec
             )
-            width_mm = width_px / 300 * 25.4  # px → mm bei 300 dpi
-            height_mm = height_px / 300 * 25.4  # px → mm
+            #width_mm = width_px / 300 * 25.4  # px → mm bei 300 dpi
+            #height_mm = height_px / 300 * 25.4  # px → mm
+            width_mm = 100
+            height_mm = 62
             # 1) mm-Angaben → px-Strings bei 300 dpi
             def _mm_to_px_str(val):
                 if isinstance(val, str) and val.endswith("mm"):
