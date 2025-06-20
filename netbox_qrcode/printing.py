@@ -35,19 +35,6 @@ def _get_printer_cfg() -> Tuple[Dict[str, Any], str]:
     default_label = get_plugin_config("netbox_qrcode", "DEFAULT_LABEL_SIZE", "62")
     return printers.get(default_key, {}), default_label
 
-
-# ---------------------------------------------------------------------------
-# Bild passend einpassen / ausrichten
-# ---------------------------------------------------------------------------
-from PIL import Image
-
-
-# ---------------------------------------------------------------------------
-# Bild passend einpassen / Ausrichtung erst beim Druck drehen
-# ---------------------------------------------------------------------------
-from PIL import Image
-
-
 # ---------------------------------------------------------------------------
 # Bild skalieren und erst vor dem Brother-Transfer korrekt ausrichten
 # ---------------------------------------------------------------------------
