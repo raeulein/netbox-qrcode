@@ -100,11 +100,13 @@ class QRCode(PluginTemplateExtension):
             if request.GET.get("show_pdf") == str(labelDesignNo):
                 # HTML → PDF
                 pdf_bytes = render_html_to_png(html_label, width_px, height_px, want_pdf=True)
-                response = thisSelf.context['response']
-                response['Content-Type'] = 'application/pdf'
-                response['Content-Disposition'] = f'inline; filename="{obj.name}_label.pdf"'
-                response.write(pdf_bytes)
-                return response
+                # PDF einbetten aus BytesIO
+
+                data_uri = "data:application/pdf;base64," + base64.b64encode(pdf_bytes).decode()
+                return f'<object data="{data_uri}" type="application/pdf" style="width:100%;height:600px;border:1px solid #ccc">\
+                        <p>Ihr Browser kann keine eingebetteten PDFs anzeigen.\n\
+                        <a href="{data_uri}">PDF herunterladen</a></p>\
+                    </object>'
             # ---------------------------------------------------------------
 
             # 4) Drucken
