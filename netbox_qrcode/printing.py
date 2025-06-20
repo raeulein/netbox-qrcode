@@ -72,7 +72,7 @@ def _orient_image(img: Image.Image, width_px: int, height_px: int) -> Image.Imag
 
     # Sonderfall: zunächst korrekt einpassen, dann Rekursion
     img = _scale_image_to_label(img, height_px, width_px)
-    return _orient_image(img, width_px, height_px)
+    return img
 
 
 # ---------------------------------------------------------------------------
