@@ -81,11 +81,11 @@ class QRCode(PluginTemplateExtension):
                 request=request,
             )
 
-            # 3) Nur den DIV mit dem Label herauslösen
             div_id = f"QR-Code-Label_{labelDesignNo}"
+            html_label = extract_label_html(rendered, div_id, width_px, height_px)
+
             # --- PNG-Vorschau? -------------------------------------------
             if request.GET.get("show_png") == str(labelDesignNo):
-                # HTML-Label → PNG (noch unge­dreht/ungschnitten)
                 from io import BytesIO
                 from django.http import HttpResponse
                 img_buf = BytesIO()
@@ -94,14 +94,13 @@ class QRCode(PluginTemplateExtension):
                 return HttpResponse(img_buf.read(), content_type="image/png")
             # ---------------------------------------------------------------
 
-            html_label = extract_label_html(rendered, div_id, width_px, height_px)
-
             # 4) Drucken
             try:
                 print_label_from_html(html_label, code)
                 messages.success(request, "Label wurde gedruckt.")
             except Exception as exc:
                 messages.error(request, f"Druckfehler: {exc}")
+
 
 
         # Create plugin using template
