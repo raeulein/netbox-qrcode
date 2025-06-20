@@ -15,20 +15,11 @@ from PIL import Image
 def render_html_to_png(html: str, width_px: int, height_px: int) -> Image.Image:
     from weasyprint import HTML, CSS                       # Laufzeit-Import
 
-    css = CSS(
-        string=f"""
-            @page {{
-                size: {width_px}px {height_px}px;
-                margin: 0;
-                orientation: landscape;
-            }}
-            html, body {{
-                width: {width_px}px;
-                height: {height_px}px;
-                margin: 0;
-            }}
-        """
-    )
+    css = CSS(string="""
+        @page { size: auto; margin: 0 }
+        html, body { margin: 0; padding: 0 }
+    """)
+
 
     html_obj = HTML(string=html)
 
@@ -43,22 +34,13 @@ def render_html_to_png(html: str, width_px: int, height_px: int) -> Image.Image:
         ) from exc
 
     pdf_bytes = html_obj.write_pdf(stylesheets=[css])
-    pdf       = pdfium.PdfDocument(pdf_bytes)
+    pdf = pdfium.PdfDocument(pdf_bytes)
 
-    page      = pdf.get_page(0)
-    pdf_w, _  = page.get_size()
-    scale     = width_px / pdf_w                # Faktor → Zielbreite
+    page = pdf.get_page(0)
+    pdf_w, pdf_h = page.get_size()  # ← tatsächliche Breite/Höhe
+    scale = width_px / pdf_w        # skaliere auf gewünschte Druckbreite
 
-    # ---------- neue API (pypdfium2 ≥ 4) ----------
-    if hasattr(page, "render"):
-        bitmap    = page.render(scale=scale)
-        pil_image = bitmap.to_pil()
-
-    # ---------- alte API (pypdfium2 2/3) ----------
-    else:
-        # Bis v3 gab es Helferfunktion render_pdf_topil()
-        pil_image = pdfium.render_pdf_topil(
-            pdf_bytes, page_indices=[0], scale=scale
-        )[0]
+    bitmap = page.render(scale=scale)
+    pil_image = bitmap.to_pil()
 
     return pil_image
