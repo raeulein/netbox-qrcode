@@ -36,7 +36,6 @@ def render_html_to_png(html: str, width_px: int, height_px: int, want_pdf=False)
                 
                 size: 1000px 100px;
                 margin: 0;
-                orientation: landscape;
             }}
             html, body {{
                 width: 1000px;
@@ -45,9 +44,6 @@ def render_html_to_png(html: str, width_px: int, height_px: int, want_pdf=False)
             }}
         """
     )
-
-
-    html_obj = HTML(string=html)
 
     # ──────────────────────────────────────────────────────────────
     try:
@@ -59,7 +55,12 @@ def render_html_to_png(html: str, width_px: int, height_px: int, want_pdf=False)
             "oder setze WeasyPrint <58 ein."
         ) from exc
 
-    pdf_bytes = html_obj.write_pdf(stylesheets=[css])
+    # 1. Rendern mit Stylesheet
+    doc = HTML(string=html).render(stylesheets=[css])
+
+    # 2. PDF daraus bauen
+    pdf_bytes = doc.write_pdf()
+
     pdf = pdfium.PdfDocument(pdf_bytes)
     if want_pdf:
         return pdf_bytes  # PDF zurückgeben, wenn gewünscht
