@@ -29,7 +29,7 @@ def render_html_to_png(html: str, width_mm: int, height_mm: int, want_pdf=False)
 
     page = pdf.get_page(0)
     pdf_w, pdf_h = page.get_size()  # ← tatsächliche Breite/Höhe
-    scale = width_mm / pdf_w * 25.4 / 96  # skaliere auf gewünschte Druckbreite
+    scale = min(width_mm / pdf_w, height_mm / pdf_h)  # Skalierungsfaktor
 
     bitmap = page.render(scale=scale)
     pil_image = bitmap.to_pil()
