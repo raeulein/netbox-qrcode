@@ -126,10 +126,7 @@ def extract_label_html(rendered_html: str, div_id: str, width_px: int, height_px
 
     return (
         "<!DOCTYPE html>\n"
-        "<html><head><style>"
-        f"@page {{ size:{width_px}px {height_px}px; margin:0 }}"
-        f"html,body {{ width:{width_px}px; height:{height_px}px; margin:0;padding:0 }}"
-        "</style></head><body>"
+        "<html><head></head><body>"
         f"{label_div}"  # bereits gerenderter HTML‑Code
         "</body></html>"
     )
