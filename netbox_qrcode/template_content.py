@@ -7,7 +7,7 @@ from .template_content_functions import create_text, create_url, config_for_modu
 from django.contrib import messages
 from django.template.loader import render_to_string
 from .printing import (
-    print_label_from_html, _get_printer_cfg, _LABEL_SPECS, extract_label_html
+    print_label_from_html, _get_printer_cfg, _LABEL_SPECS, extract_label_html, render_html_to_png
 )
 
 # ******************************************************************************************
