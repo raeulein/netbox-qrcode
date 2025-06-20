@@ -51,40 +51,36 @@ class QRCode(PluginTemplateExtension):
         # -------- Direktdruck ----------
         if request.GET.get("direct_print") == str(labelDesignNo):
 
-            # mm-Angaben → px-Strings bei 300 dpi
+            # 0) Breite/Höhe des Ziel-Labels in px (Brother-Spezifikation)
+            p_cfg, code = _get_printer_cfg()
+            spec = _LABEL_SPECS[code]
+            width_px, height_px = (spec, spec * 4) if isinstance(spec, int) else spec
+
+            # 1) mm-Angaben → px-Strings bei 300 dpi
             def _mm_to_px_str(val):
                 if isinstance(val, str) and val.endswith("mm"):
                     return f"{mm2px(val)}px"
                 return val
 
-            # komplette Konfiguration in Pixel umrechnen
             px_cfg = {k: _mm_to_px_str(v) for k, v in config.items()}
-
-            # Labelcontainer auf die exakten Brother-Pixel setzen
             px_cfg["label_width"]  = f"{width_px}px"
             px_cfg["label_height"] = f"{height_px}px"
 
-            # 1) qrcode3.html rendern (Card + Label-DIV)
+            # 2) qrcode3.html rendern (Card + Label-DIV)
             rendered = render_to_string(
                 "netbox_qrcode/qrcode3.html",
                 {
                     **px_cfg,
-                    "object"        : obj,
-                    "labelDesignNo" : labelDesignNo,
-                    "qrCode"        : qrCode,
-                    "text"          : text,
+                    "object": obj,
+                    "labelDesignNo": labelDesignNo,
+                    "qrCode": qrCode,
+                    "text": text,
                 },
                 request=request,
             )
 
-
-            # 2) Etikett-Breite/Höhe aus Brother-Spec
-            p_cfg, code = _get_printer_cfg()
-            spec        = _LABEL_SPECS[code]
-            width_px, height_px = (spec, spec * 4) if isinstance(spec, int) else spec
-
-            # 3) Nur den DIV mit dem Label herausschneiden
-            div_id     = f"QR-Code-Label_{labelDesignNo}"
+            # 3) Nur den DIV mit dem Label herauslösen
+            div_id = f"QR-Code-Label_{labelDesignNo}"
             html_label = extract_label_html(rendered, div_id, width_px, height_px)
 
             # 4) Drucken
