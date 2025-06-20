@@ -67,19 +67,7 @@ class QRCode(PluginTemplateExtension):
             height_mm = width_px / 300 * 25.4  # mm für WeasyPrint
 
 
-            px_cfg = {
-                "label_edge_top": config.get("label_edge_top", "0px"),
-                "label_edge_left": config.get("label_edge_left", "0px"),
-                "label_edge_right": config.get("label_edge_right", "0px"),
-                "label_edge_bottom": config.get("label_edge_bottom", "0px"),
-                "text_location": config.get("text_location", "bottom"),
-                "text_align_horizontal": config.get("text_align_horizontal", "center"),
-                "text_align_vertical": config.get("text_align_vertical", "middle"),
-                "font": config.get("font", "Arial"),
-                "font_size": config.get("font_size", 12),
-                "font_weight": config.get("font_weight", "normal"),
-                "font_color": config.get("font_color", "#000000"),
-            }
+            px_cfg = {}
             px_cfg["label_width"]  = f"{mm2csspx(width_mm)}px"
             px_cfg["label_height"] = f"{mm2csspx(height_mm)}px"
 
