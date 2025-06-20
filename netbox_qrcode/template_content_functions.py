@@ -156,3 +156,6 @@ def mm2px(val_mm: str | int) -> int:
     else:
         mm = float(str(val_mm).rstrip("mm"))
     return round(mm * 300 / 25.4)
+
+def mm2csspx(val_mm):
+    return round(float(val_mm.rstrip('mm')) * 96 / 25.4)

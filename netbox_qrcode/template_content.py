@@ -5,7 +5,7 @@ from packaging import version
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from netbox.plugins import PluginTemplateExtension
-from .template_content_functions import create_text, create_url, config_for_modul, create_QRCode, mm2px
+from .template_content_functions import create_text, create_url, config_for_modul, create_QRCode, mm2px, mm2csspx
 
 from django.contrib import messages
 from django.template.loader import render_to_string
@@ -77,8 +77,8 @@ class QRCode(PluginTemplateExtension):
                 return val
 
             px_cfg = {k: _mm_to_px_str(v) for k, v in config.items()}
-            px_cfg["label_width"]  = f"{width_px}px"
-            px_cfg["label_height"] = f"{height_px}px"
+            px_cfg["label_width"]  = f"{mm2csspx(config['label_width'])}px"
+            px_cfg["label_height"] = f"{mm2csspx(config['label_height'])}px"
 
             # 2) qrcode3.html rendern (Card + Label-DIV)
             rendered = render_to_string(
