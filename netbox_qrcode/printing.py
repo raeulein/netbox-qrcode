@@ -11,7 +11,14 @@ from bs4 import BeautifulSoup
 from .html_render import render_html_to_png
 
 # ---------------------------------------------------------------------------
-# Pixel-Maße bei 300 dpi – Keys entsprechen Brother-Labelcodes
+# Druck- und CSS-Konstanten
+# ---------------------------------------------------------------------------
+_PRINTER_DPI = 300
+_CSS_DPI     = 96
+_SCALE_HTML  = _PRINTER_DPI / _CSS_DPI        # 3,125
+
+# ---------------------------------------------------------------------------
+# Pixel-Maße (bei 300 dpi) – Keys entsprechen Brother-Labelcodes
 # ---------------------------------------------------------------------------
 _LABEL_SPECS: dict[str, int | tuple[int, int]] = {
     "12": 106,
@@ -41,8 +48,6 @@ _LABEL_SPECS: dict[str, int | tuple[int, int]] = {
 # ---------------------------------------------------------------------------
 # Konfiguration aus NetBox-Settings laden
 # ---------------------------------------------------------------------------
-
-
 def _get_printer_cfg() -> Tuple[Dict[str, Any], str]:
     printers = get_plugin_config("netbox_qrcode", "PRINTERS", {})
     default_key = get_plugin_config(
@@ -53,29 +58,22 @@ def _get_printer_cfg() -> Tuple[Dict[str, Any], str]:
 
 
 # ---------------------------------------------------------------------------
-# Helfer: rotate-Wert abhängig von Bild- und Label-Orientierung
+# rotate-Wert abhängig von Label-Orientierung
 # ---------------------------------------------------------------------------
-
-
-def _rotation_for_printer(img: Image.Image, width_px: int, height_px: int) -> str:
+def _rotation_for_printer(width_px: int, height_px: int) -> str:
     """
-    Liefert "0" (nichts drehen) oder "90" (90 ° rechts),
-    wenn die Orientierung des gerenderten PNGs nicht zur
-    Brother-Label-Spezifikation passt.  Die Drehung übernimmt
-    anschließend `brother_ql.convert()`, das die Abmessungen beibehält.
+    Brother-QL erwartet Hochformat.
+    Ist das Label höher als breit (klassisches 62×100 mm),
+    müssen wir um 90° drehen.
     """
-    img_landscape = img.width > img.height
-    label_landscape = width_px > height_px
-    return "90" if img_landscape != label_landscape else "0"
+    return "90" if height_px > width_px else "0"
 
 
 # ---------------------------------------------------------------------------
 # Hauptfunktion: HTML → Brother-QL-Druck
 # ---------------------------------------------------------------------------
-
-
 def print_label_from_html(html: str, label_code: str | None = None) -> None:
-    """Rendert HTML, bestimmt korrekte Drehung und schickt Rasterdaten an den Drucker."""
+    """Rendert das Label-HTML, skaliert es auf 300 dpi und schickt es an den Drucker."""
 
     # 1) Drucker- und Label-Spezifikation ermitteln
     p_cfg, default_label = _get_printer_cfg()
@@ -88,30 +86,34 @@ def print_label_from_html(html: str, label_code: str | None = None) -> None:
 
     width_px, height_px = (spec, spec * 4) if isinstance(spec, int) else spec
 
-    # 2) HTML → Pillow (WeasyPrint rendert direkt in die richtigen Abmessungen)
-    img: Image.Image = render_html_to_png(html, width_px, height_px)
+    # 2) Label-HTML skalierend verpacken (96 → 300 dpi)
+    html_scaled = extract_label_html(html, "QR-Code-Label", width_px, height_px)
 
-    # 3) rotate-Wert ermitteln (Brother dreht dann selbst – Bildgröße bleibt unverändert)
-    rotate = _rotation_for_printer(img, width_px, height_px)
+    # 3) WeasyPrint → PNG (Bildgröße = width_px × height_px)
+    img: Image.Image = render_html_to_png(html_scaled, width_px, height_px)
 
-    # 4) In Brother-Raster wandeln und senden
+    # 4) Rasterdaten erzeugen & senden
     raster = BrotherQLRaster(p_cfg["MODEL"])
-    instr = convert(raster, [img], label=code, rotate=rotate)
+    rotate = _rotation_for_printer(width_px, height_px)
+    instr  = convert(raster, [img], label=code, rotate=rotate)
 
     backend_cls = backend_factory(p_cfg["BACKEND"])["backend_class"]
     backend_cls(p_cfg["ADDRESS"]).write(instr)
 
 
 # ---------------------------------------------------------------------------
-# Label-DIV aus qrcode3.html extrahieren
+# Label-DIV herauslösen & Wrapper mit transform:scale()
 # ---------------------------------------------------------------------------
-
-
 def extract_label_html(
-    rendered_html: str, div_id: str, width_px: int, height_px: int
+    rendered_html: str,
+    div_id: str,
+    width_px: int,
+    height_px: int,
 ) -> str:
-    """Extrahiert den Label-Container und setzt ihn in ein Minimal-HTML."""
-
+    """
+    Vergrößert den DIV-Inhalt von 96 dpi auf 300 dpi,
+    ohne das Endformat zu ändern.
+    """
     soup = BeautifulSoup(rendered_html, "html.parser")
     label_div = soup.find(id=div_id)
     if label_div is None:
@@ -119,12 +121,19 @@ def extract_label_html(
             f"DIV #{div_id} nicht gefunden – Template evtl. geändert?"
         )
 
+    # Innengröße → 1/3,125 der Zielgröße
+    inner_w = round(width_px  / _SCALE_HTML)
+    inner_h = round(height_px / _SCALE_HTML)
+
     return (
         "<!DOCTYPE html>\n"
         "<html><head><style>"
         f"@page {{ size:{width_px}px {height_px}px; margin:0 }}"
         f"html,body {{ width:{width_px}px; height:{height_px}px; margin:0;padding:0 }}"
         "</style></head><body>"
-        f"{label_div}"  # bereits gerenderter HTML-Code
+        f"<div style='width:{inner_w}px;height:{inner_h}px;"
+        f"transform:scale({_SCALE_HTML});transform-origin:top left'>"
+        f"{label_div}"
+        "</div>"
         "</body></html>"
     )
