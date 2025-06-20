@@ -82,18 +82,9 @@ def print_label_from_html(html: str, label_code: str | None = None) -> None:
     # 3) Auf Ziel‑Auflösung hochskalieren
     img = _scale_image_to_label(img, width_px, height_px)
 
-    # 4) Orientierung prüfen / drehen
-    img = _orient_image(img, width_px, height_px)
-
-    # ─────────────────────────────────────────────────────────
-    # 4a) Querformatige *gestanzte* Labels zusätzlich drehen,
-    #     damit die lange Seite über den Druckkopf läuft.
-    if "x" in code and height_px > width_px:      # z. B. 29x90, 39x90 …
-        img = img.rotate(90, expand=True)
-
-    # 5) In Brother-Raster wandeln und senden
+    # 4) In Brother‑Raster wandeln und senden
     raster = BrotherQLRaster(p_cfg["MODEL"])
-    instr = convert(raster, [img], label=code, rotate="0")  # jetzt wirklich korrekt
+    instr = convert(raster, [img], label=code, rotate="auto")
 
 
 # ---------------------------------------------------------------------------
