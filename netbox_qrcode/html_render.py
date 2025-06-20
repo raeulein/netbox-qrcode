@@ -15,14 +15,7 @@ def render_html_to_png(html: str, width_mm: int, height_mm: int, want_pdf=False)
     """)
 
     # ──────────────────────────────────────────────────────────────
-    try:
-        import pypdfium2 as pdfium              # reines pip-Rad
-    except ModuleNotFoundError as exc:
-        raise RuntimeError(
-            "WeasyPrint ≥58 liefert nur noch PDF.  "
-            "Installiere pypdfium2 (`pip install pypdfium2`) "
-            "oder setze WeasyPrint <58 ein."
-        ) from exc
+    import pypdfium2 as pdfium              # reines pip-Rad
 
     # 1. Rendern mit Stylesheet
     doc = HTML(string=html).render(stylesheets=[css])
