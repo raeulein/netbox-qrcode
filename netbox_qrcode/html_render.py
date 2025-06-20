@@ -43,7 +43,7 @@ def render_html_to_png(html: str, width_px: int, height_px: int, want_pdf=False)
             "oder setze WeasyPrint <58 ein."
         ) from exc
 
-    pdf_bytes = html_obj.write_pdf(stylesheets=[css])
+    pdf_bytes = html_obj.write_pdf()
     pdf = pdfium.PdfDocument(pdf_bytes)
     if want_pdf:
         return pdf_bytes  # PDF zurückgeben, wenn gewünscht
