@@ -95,6 +95,9 @@ def print_label_from_html(html: str, label_code: str | None = None) -> None:
     # 2) HTML → PNG
     img = render_html_to_png(html, width_px, height_px)
 
+    #Speichere das Bild in /tmp
+    img.save("/tmp/label_image.png", format="PNG")
+
     # 3) Einpassen (niemals Beschnitt)
     img = _scale_image_to_label(img, width_px, height_px)
 
