@@ -10,6 +10,7 @@ Funktioniert mit *allen* WeasyPrint-Versionen:
 from io import BytesIO
 from typing import Tuple
 from PIL import Image
+from django.contrib import messages
 
 def _px_to_in(px, dpi=300):      # Helper
     return px / dpi
@@ -20,6 +21,10 @@ def render_html_to_png(html: str, width_px: int, height_px: int, want_pdf=False)
     width_in  = _px_to_in(width_px)      # 696px → 2.32in
     height_in = _px_to_in(height_px)     # 271px → 0.90in
     page_size = f"{width_in}in {height_in}in"
+    messages.success(
+        None, f"Rendering HTML to PNG with WeasyPrint {HTML.__version__} "
+        f"({width_px}x{height_px}px, {page_size})"
+    )
 
     css = CSS(string=f"""
         @page {{ size: {page_size}; margin:0 }}
