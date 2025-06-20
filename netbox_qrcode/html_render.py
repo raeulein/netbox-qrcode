@@ -3,8 +3,6 @@ from typing import Tuple
 from PIL import Image
 from django.contrib import messages
 
-def _px_to_in(px, dpi=300):      # Helper
-    return px / dpi
 
 def render_html_to_png(html: str, width_mm: int, height_mm: int, want_pdf=False) -> Image.Image:
     from weasyprint import HTML, CSS                       # Laufzeit-Import
