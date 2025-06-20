@@ -62,6 +62,7 @@ class QRCode(PluginTemplateExtension):
             spec = _LABEL_SPECS[code]
             #width_px, height_px = (spec, spec * 4) if isinstance(spec, int) else spec
             
+            
             width_px, height_px = (
                 (spec, spec * 4) if isinstance(spec, int) else spec
             )
@@ -102,7 +103,7 @@ class QRCode(PluginTemplateExtension):
             
             if request.GET.get("show_pdf") == str(labelDesignNo):
                 # HTML → PDF
-                pdf_bytes = render_html_to_png(html_label, height_px, width_px, want_pdf=True)
+                pdf_bytes = render_html_to_png(html_label, width_px, height_px, want_pdf=True)
                 # PDF einbetten aus BytesIO
 
                 data_uri = "data:application/pdf;base64," + base64.b64encode(pdf_bytes).decode()

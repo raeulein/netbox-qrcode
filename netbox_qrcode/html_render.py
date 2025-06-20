@@ -3,14 +3,14 @@ from typing import Tuple
 from PIL import Image
 from django.contrib import messages
 
-def _px_to_in(px, dpi=300):      # Helper
+def _px_to_in(px, dpi=96):      # Helper
     return px / dpi
 
 def render_html_to_png(html: str, width_px: int, height_px: int, want_pdf=False) -> Image.Image:
     from weasyprint import HTML, CSS                       # Laufzeit-Import
 
-    width_in  = _px_to_in(width_px)      # 696px → 2.32in
-    height_in = _px_to_in(height_px)     # 271px → 0.90in
+    width_in  = _px_to_in(width_px)
+    height_in = _px_to_in(height_px)
     page_size = f"{width_in}in {height_in}in"
 
     css = CSS(string=f"""
