@@ -69,11 +69,6 @@ def _orient_image(img: Image.Image, width_px: int, height_px: int) -> Image.Imag
     Uhrzeigersinn dreht.  Danach stimmen Abmessungen und Ausrichtung für den
     Brother-Treiber, so dass `convert(..., rotate="0")` genügt.
     """
-    if img.size == (width_px, height_px):
-        return img
-    if img.size == (height_px, width_px):
-        # clockwise 90° → Pillow: -90 °
-        return img.rotate(-90, expand=True)
 
     # Sonderfall: zunächst korrekt einpassen, dann Rekursion
     img = _scale_image_to_label(img, height_px, width_px)
