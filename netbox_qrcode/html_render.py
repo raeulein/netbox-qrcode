@@ -3,7 +3,7 @@ from typing import Tuple
 from PIL import Image
 from django.contrib import messages
 
-def _px_to_in(px, dpi=96):      # Helper
+def _px_to_in(px, dpi=300):      # Helper
     return px / dpi
 
 def render_html_to_png(html: str, width_px: int, height_px: int, want_pdf=False) -> Image.Image:
