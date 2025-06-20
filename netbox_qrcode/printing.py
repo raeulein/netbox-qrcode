@@ -93,13 +93,7 @@ def print_label_from_html(html: str, label_code: str | None = None) -> None:
     width_px, height_px = (spec, spec * 4) if isinstance(spec, int) else spec
     width_mm = width_px / 300 * 25.4  # mm für WeasyPrint
     height_mm = height_px / 300 * 25.4  # mm für WeasyPrint
-
-    # code zerteilen am x und mm daraus erzeugen
-    if "x" in code:
-        width_mm, height_mm = map(float, code.split("x"))
-    else:
-        width_mm = height_mm = float(code.rstrip("mm"))
-
+    
     # 2) HTML → PNG
     img = render_html_to_png(html, width_mm, height_mm)
 

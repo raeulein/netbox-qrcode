@@ -28,8 +28,11 @@ def render_html_to_png(html: str, width_mm: int, height_mm: int, want_pdf=False)
         return pdf_bytes  # PDF zurückgeben, wenn gewünscht
 
     page = pdf.get_page(0)
-    
-    bitmap = page.render()
+
+    # Rendere die Seite als 300dpi Bitmap
+    bitmap = page.render(scale=300 / 72)  # WeasyPrint gibt 72dpi aus, wir wollen 300dpi
+
+
     pil_image = bitmap.to_pil()
 
     return pil_image
