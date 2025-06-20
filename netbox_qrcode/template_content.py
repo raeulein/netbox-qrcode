@@ -48,8 +48,10 @@ class QRCode(PluginTemplateExtension):
 
         request = self.context['request'] 
 
-        # -------- Direktdruck ----------
-        if request.GET.get("direct_print") == str(labelDesignNo):
+        # -------- Direktdruck ODER Vorschau ----------
+        if request.GET.get("direct_print") == str(labelDesignNo) or \
+           request.GET.get("show_png")     == str(labelDesignNo):
+
 
             # 0) Breite/Höhe des Ziel-Labels in px (Brother-Spezifikation)
             p_cfg, code = _get_printer_cfg()
@@ -81,6 +83,17 @@ class QRCode(PluginTemplateExtension):
 
             # 3) Nur den DIV mit dem Label herauslösen
             div_id = f"QR-Code-Label_{labelDesignNo}"
+            # --- PNG-Vorschau? -------------------------------------------
+            if request.GET.get("show_png") == str(labelDesignNo):
+                # HTML-Label → PNG (noch unge­dreht/ungschnitten)
+                from io import BytesIO
+                from django.http import HttpResponse
+                img_buf = BytesIO()
+                render_html_to_png(html_label, width_px, height_px).save(img_buf, format="PNG")
+                img_buf.seek(0)
+                return HttpResponse(img_buf.read(), content_type="image/png")
+            # ---------------------------------------------------------------
+
             html_label = extract_label_html(rendered, div_id, width_px, height_px)
 
             # 4) Drucken
