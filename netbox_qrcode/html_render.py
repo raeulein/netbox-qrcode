@@ -22,8 +22,7 @@ def render_html_to_png(html: str, width_px: int, height_px: int, want_pdf=False)
     height_in = _px_to_in(height_px)     # 271px → 0.90in
     page_size = f"{width_in}in {height_in}in"
     messages.success(
-        None, f"Rendering HTML to PNG with WeasyPrint {HTML.__version__} "
-        f"({width_px}x{height_px}px, {page_size})"
+        None, f"WeasyPrint ({width_px}x{height_px}px, {page_size})"
     )
 
     css = CSS(string=f"""
