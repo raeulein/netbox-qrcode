@@ -66,8 +66,13 @@ class QRCode(PluginTemplateExtension):
             width_mm = height_px / 300 * 25.4  # mm für WeasyPrint
             height_mm = width_px / 300 * 25.4  # mm für WeasyPrint
 
+            # 1) mm-Angaben → px-Strings bei 300 dpi
+            def _mm_to_px_str(val):
+                if isinstance(val, str) and val.endswith("mm"):
+                    return f"{mm2csspx(val)}px"
+                return val
 
-            px_cfg = {}
+            px_cfg = {k: _mm_to_px_str(v) for k, v in config.items()}
             px_cfg["label_width"]  = f"{mm2csspx(width_mm)}px"
             px_cfg["label_height"] = f"{mm2csspx(height_mm)}px"
 
