@@ -1,3 +1,6 @@
+import base64
+from io import BytesIO
+
 from packaging import version
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
@@ -86,12 +89,12 @@ class QRCode(PluginTemplateExtension):
 
             # --- PNG-Vorschau? -------------------------------------------
             if request.GET.get("show_png") == str(labelDesignNo):
-                from io import BytesIO
-                from django.http import HttpResponse
-                img_buf = BytesIO()
-                render_html_to_png(html_label, width_px, height_px).save(img_buf, format="PNG")
-                img_buf.seek(0)
-                return HttpResponse(img_buf.read(), content_type="image/png")
+                # HTML → PNG
+                buf = BytesIO()
+                render_html_to_png(html_label, width_px, height_px).save(buf, format="PNG")
+                data_uri = "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
+                # Bild als ganz normales <img> zurückgeben
+                return f'<img src="{data_uri}" alt="Label Preview" style="max-width:100%;border:1px solid #ccc"/>'
             # ---------------------------------------------------------------
 
             # 4) Drucken
