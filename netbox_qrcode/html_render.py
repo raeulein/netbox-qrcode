@@ -1,12 +1,3 @@
-"""
-HTML-Fragment → Pillow-Image
-
-Funktioniert mit *allen* WeasyPrint-Versionen:
-•  ≤ 52       :  HTML.write_png()
-•  53 – 57    :  Document.write_png()
-•  ≥ 58       :  PDF-Umweg + pypdfium2.render_topil()
-"""
-
 from io import BytesIO
 from typing import Tuple
 from PIL import Image
