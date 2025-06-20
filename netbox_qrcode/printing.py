@@ -34,52 +34,49 @@ def _get_printer_cfg() -> Tuple[Dict[str, Any], str]:
     )
     default_label = get_plugin_config("netbox_qrcode", "DEFAULT_LABEL_SIZE", "62")
     return printers.get(default_key, {}), default_label
-
 # ---------------------------------------------------------------------------
-# Bild skalieren und erst vor dem Brother-Transfer korrekt ausrichten
+# Bild auf Labelgröße bringen – ohne Beschnitt, mit korrekter Endausrichtung
 # ---------------------------------------------------------------------------
 from PIL import Image
 
 
 def _scale_image_to_label(img: Image.Image, width_px: int, height_px: int) -> Image.Image:
     """
-    Passt das gerenderte PNG so an, dass es vollständig innerhalb der Zielfläche
-    liegt (nichts wird abgeschnitten). Es kann dabei vergrößert oder verkleinert
-    werden. Danach wird es zentriert auf ein weißes Canvas in Original­größe
-    gesetzt.
+    Skaliert das gerenderte PNG so, dass **nichts** übersteht (Innen-Fit)
+    und legt es zentriert auf ein Canvas mit den exakten Brother-Pixelmaßen.
+    Das resultierende Bild hat *immer* (width_px × height_px).
     """
-    # Faktor so wählen, dass **keine** Seite größer als das Ziel ist
+    if img.size == (width_px, height_px):
+        return img  # passt bereits perfekt
+
+    # Skalierungsfaktor → größte mögliche Größe, bei der beide Seiten ≤ Zielmaß
     scale = min(width_px / img.width, height_px / img.height)
     new_size = (round(img.width * scale), round(img.height * scale))
     img = img.resize(new_size, Image.LANCZOS)
 
-    # Weißes Hintergrund-Canvas (exakte Brother-Auflösung)
+    # Weißes Hintergrund-Canvas in exakter Label-Größe
     bg = Image.new("RGB", (width_px, height_px), "white")
     offset = ((width_px - new_size[0]) // 2, (height_px - new_size[1]) // 2)
     bg.paste(img, offset)
+
     return bg
 
 
 def _orient_image(img: Image.Image, width_px: int, height_px: int) -> Image.Image:
     """
-    Bringt das Bild erst **jetzt** auf dieselbe Quer/Hoch-Orientierung wie das
-    Ziel-Label. Damit stimmen die vom Brother-Treiber erwarteten Dimensionen.
+    Stellt sicher, dass das Endbild dieselbe Orientierung wie die
+    Brother-Label-Spezifikation besitzt.  Erst wenn Breite/Höhe vertauscht sind,
+    wird um 90 ° gedreht.  Danach ist die Größe garantiert korrekt.
     """
-    if img.size == (width_px, height_px):
-        return img  # alles passt
+    if img.size == (width_px, height_px):            # Portrait/Quer stimmt
+        return img
+    if img.size == (height_px, width_px):            # vertauscht → drehen
+        return img.rotate(90, expand=True)
 
-    if img.size == (height_px, width_px):
-        img = img.rotate(90, expand=True)
-    else:
-        # Bei ungewöhnlichen Abmessungen Orientierung per Seiten­verhältnis ableiten
-        if (img.width > img.height) != (width_px > height_px):
-            img = img.rotate(90, expand=True)
-
-    # Sicherheitshalber noch einmal auf das Ziel­format einpassen
-    if img.size != (width_px, height_px):
-        img = _scale_image_to_label(img, width_px, height_px)
-
-    return img
+    # In allen anderen Fällen (z. B. HTML liefert Querformat bei Portrait-Label)
+    # erst anpassen, dann Rekursion – tritt nur einmal auf.
+    img = _scale_image_to_label(img, height_px, width_px)
+    return _orient_image(img, width_px, height_px)
 
 
 
