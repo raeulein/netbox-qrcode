@@ -32,7 +32,7 @@ def _get_printer_cfg() -> Tuple[Dict[str, Any], str]:
     default_key = get_plugin_config(
         "netbox_qrcode", "DEFAULT_PRINTER", next(iter(printers), None)
     )
-    default_label = get_plugin_config("netbox_qrcode", "DEFAULT_LABEL_SIZE", "62")
+    default_label = get_plugin_config("netbox_qrcode", "DEFAULT_LABEL_SIZE", "62x100")
     return printers.get(default_key, {}), default_label
 
 # ---------------------------------------------------------------------------
@@ -91,9 +91,11 @@ def print_label_from_html(html: str, label_code: str | None = None) -> None:
     code = label_code or default_label
     spec = _LABEL_SPECS[code]
     width_px, height_px = (spec, spec * 4) if isinstance(spec, int) else spec
+    width_mm = width_px / 300 * 25.4  # mm für WeasyPrint
+    height_mm = height_px / 300 * 25.4  # mm für WeasyPrint
 
     # 2) HTML → PNG
-    img = render_html_to_png(html, width_px, height_px)
+    img = render_html_to_png(html, width_mm, height_mm)
 
     # 3) Einpassen (niemals Beschnitt)
     img = _scale_image_to_label(img, width_px, height_px)

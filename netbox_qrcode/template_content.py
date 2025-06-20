@@ -66,6 +66,8 @@ class QRCode(PluginTemplateExtension):
             width_px, height_px = (
                 (spec, spec * 4) if isinstance(spec, int) else spec
             )
+            width_mm = width_px / 300 * 25.4  # px → mm bei 300 dpi
+            height_mm = height_px / 300 * 25.4  # px → mm
             # 1) mm-Angaben → px-Strings bei 300 dpi
             def _mm_to_px_str(val):
                 if isinstance(val, str) and val.endswith("mm"):
@@ -96,14 +98,14 @@ class QRCode(PluginTemplateExtension):
             if request.GET.get("show_png") == str(labelDesignNo):
                 # HTML → PNG
                 buf = BytesIO()
-                render_html_to_png(html_label, width_px, height_px).save(buf, format="PNG")
+                render_html_to_png(html_label, width_mm, height_mm).save(buf, format="PNG")
                 data_uri = "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
                 # Bild als ganz normales <img> zurückgeben
                 return f'<img src="{data_uri}" alt="Label Preview" style="max-width:100%;border:1px solid #ccc"/>'
             
             if request.GET.get("show_pdf") == str(labelDesignNo):
                 # HTML → PDF
-                pdf_bytes = render_html_to_png(html_label, width_px, height_px, want_pdf=True)
+                pdf_bytes = render_html_to_png(html_label, width_mm, height_mm, want_pdf=True)
                 # PDF einbetten aus BytesIO
 
                 data_uri = "data:application/pdf;base64," + base64.b64encode(pdf_bytes).decode()

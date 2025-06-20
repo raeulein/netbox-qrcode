@@ -6,12 +6,10 @@ from django.contrib import messages
 def _px_to_in(px, dpi=300):      # Helper
     return px / dpi
 
-def render_html_to_png(html: str, width_px: int, height_px: int, want_pdf=False) -> Image.Image:
+def render_html_to_png(html: str, width_mm: int, height_mm: int, want_pdf=False) -> Image.Image:
     from weasyprint import HTML, CSS                       # Laufzeit-Import
 
-    width_in  = _px_to_in(width_px)
-    height_in = _px_to_in(height_px)
-    page_size = f"{width_in}in {height_in}in"
+    page_size = f"{width_mm}mm {height_mm}mm"
 
     css = CSS(string=f"""
         @page {{ size: {page_size}; margin:0 }}
@@ -40,7 +38,7 @@ def render_html_to_png(html: str, width_px: int, height_px: int, want_pdf=False)
 
     page = pdf.get_page(0)
     pdf_w, pdf_h = page.get_size()  # ← tatsächliche Breite/Höhe
-    scale = width_px / pdf_w        # skaliere auf gewünschte Druckbreite
+    scale = width_mm / pdf_w * 25.4 / 300  # skaliere auf gewünschte Druckbreite
 
     bitmap = page.render(scale=scale)
     pil_image = bitmap.to_pil()
