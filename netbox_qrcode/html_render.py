@@ -17,10 +17,19 @@ def render_html_to_png(html: str, width_px: int, height_px: int) -> Image.Image:
 
     css = CSS(
         string=f"""
-            @page {{ size:{width_px}px {height_px}px; margin:0 }}
-            html,body {{ width:{width_px}px; height:{height_px}px; margin:0 }}
+            @page {{
+                size: {width_px}px {height_px}px;
+                margin: 0;
+                orientation: landscape;
+            }}
+            html, body {{
+                width: {width_px}px;
+                height: {height_px}px;
+                margin: 0;
+            }}
         """
     )
+
     html_obj = HTML(string=html)
 
     # ──────────────────────────────────────────────────────────────
