@@ -79,7 +79,7 @@ def print_label_from_html(html: str, label_code: str | None = None) -> None:
     img = render_html_to_png(html, height_px, width_px)
 
     # 3) Einpassen (niemals Beschnitt)
-    #img = _scale_image_to_label(img, width_px, height_px)
+    img = _scale_image_to_label(img, width_px, height_px)
 
     # 5) Am Brother erst *jetzt* drehen: Hochformat-Labels → 90 °
     rotate_mode = "auto"
