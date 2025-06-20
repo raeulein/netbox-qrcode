@@ -152,8 +152,16 @@ class QRCode(PluginTemplateExtension):
     #   further label views are also created as additional plugin views.
     def Create_PluginContent(self):
 
+        request = self.context['request']
+
+        # --- PNG-Preview: direkt 1:1 zurückgeben -------------------------
+        if request.GET.get("show_png"):
+            label_no = int(request.GET["show_png"])
+            return QRCode.Create_SubPluginContent(self, label_no)
+        # -----------------------------------------------------------------
+
         # First Plugin Content
-        pluginContent = QRCode.Create_SubPluginContent(self, 1) 
+        pluginContent = QRCode.Create_SubPluginContent(self, 1)
 
         # Check whether there is another configuration for the object, e.g. device, rack, etc.
         # Support up to 10 additional label configurations (objectName_2 to ..._10) per object (e.g. device, rack, etc.).
