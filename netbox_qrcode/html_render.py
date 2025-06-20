@@ -11,24 +11,20 @@ from io import BytesIO
 from typing import Tuple
 from PIL import Image
 
+def _px_to_in(px, dpi=300):      # Helper
+    return px / dpi
 
 def render_html_to_png(html: str, width_px: int, height_px: int, want_pdf=False) -> Image.Image:
     from weasyprint import HTML, CSS                       # Laufzeit-Import
 
-    css = CSS(
-        string=f"""
-            @page {{
-                
-                size: {width_px}px {height_px}px;
-                margin: 0;
-            }}
-            html, body {{
-                width: {width_px}px;
-                height: {height_px}px;
-                margin: 0;
-            }}
-        """
-    )
+    width_in  = _px_to_in(width_px)      # 696px → 2.32in
+    height_in = _px_to_in(height_px)     # 271px → 0.90in
+    page_size = f"{width_in}in {height_in}in"
+
+    css = CSS(string=f"""
+        @page {{ size: {page_size}; margin:0 }}
+        html,body {{ width:{page_size.split()[0]}; height:{page_size.split()[1]}; margin:0 }}
+    """)
 
     # ──────────────────────────────────────────────────────────────
     try:
