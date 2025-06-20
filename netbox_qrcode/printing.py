@@ -99,7 +99,16 @@ def print_label_from_html(html: str, label_code: str | None = None) -> None:
     img.save("/tmp/label_image.png", format="PNG")
 
     # 3) Einpassen (niemals Beschnitt)
-    img = _scale_image_to_label(img, width_px, height_px)
+    image = render_html_to_png(html, 800, 600)
+
+    buffer = BytesIO()
+    image.save(buffer, format="PNG")
+    buffer.seek(0)  # Wichtig: zurück an den Anfang!
+
+    # Beispiel: als HTTP-Response zurückgeben (z. B. in Django-View)
+    from django.http import HttpResponse
+
+    return HttpResponse(buffer.getvalue(), content_type="image/png")
 
     #4) Ausrichtung: Breite/Höhe vertauscht?
     #img = _orient_image(img, width_px, height_px)
