@@ -48,16 +48,25 @@ from PIL import Image
 from PIL import Image
 
 
-def _scale_image_to_label(img: Image.Image, width_px: int, height_px: int) -> Image.Image:
-    """Skaliert das gerenderte PNG so, dass absolut nichts beschnitten wird
-    (innerhalb der Ziel­fläche bleiben) und zentriert es anschließend."""
+# ---------------------------------------------------------------------------
+# Bild skalieren und erst vor dem Brother-Transfer korrekt ausrichten
+# ---------------------------------------------------------------------------
+from PIL import Image
 
-    # maximal möglicher Faktor, bei dem beide Seiten ≤ Zielmaß bleiben
+
+def _scale_image_to_label(img: Image.Image, width_px: int, height_px: int) -> Image.Image:
+    """
+    Passt das gerenderte PNG so an, dass es vollständig innerhalb der Zielfläche
+    liegt (nichts wird abgeschnitten). Es kann dabei vergrößert oder verkleinert
+    werden. Danach wird es zentriert auf ein weißes Canvas in Original­größe
+    gesetzt.
+    """
+    # Faktor so wählen, dass **keine** Seite größer als das Ziel ist
     scale = min(width_px / img.width, height_px / img.height)
     new_size = (round(img.width * scale), round(img.height * scale))
     img = img.resize(new_size, Image.LANCZOS)
 
-    # weißes Canvas in exakter Brother-Auflösung und mittig einfügen
+    # Weißes Hintergrund-Canvas (exakte Brother-Auflösung)
     bg = Image.new("RGB", (width_px, height_px), "white")
     offset = ((width_px - new_size[0]) // 2, (height_px - new_size[1]) // 2)
     bg.paste(img, offset)
@@ -65,9 +74,26 @@ def _scale_image_to_label(img: Image.Image, width_px: int, height_px: int) -> Im
 
 
 def _orient_image(img: Image.Image, width_px: int, height_px: int) -> Image.Image:
-    """Lässt das Bild bewusst in der *Original*-Ausrichtung.
-    Die eigentliche Rotation übernimmt erst der Brother-Treiber."""
+    """
+    Bringt das Bild erst **jetzt** auf dieselbe Quer/Hoch-Orientierung wie das
+    Ziel-Label. Damit stimmen die vom Brother-Treiber erwarteten Dimensionen.
+    """
+    if img.size == (width_px, height_px):
+        return img  # alles passt
+
+    if img.size == (height_px, width_px):
+        img = img.rotate(90, expand=True)
+    else:
+        # Bei ungewöhnlichen Abmessungen Orientierung per Seiten­verhältnis ableiten
+        if (img.width > img.height) != (width_px > height_px):
+            img = img.rotate(90, expand=True)
+
+    # Sicherheitshalber noch einmal auf das Ziel­format einpassen
+    if img.size != (width_px, height_px):
+        img = _scale_image_to_label(img, width_px, height_px)
+
     return img
+
 
 
 # ---------------------------------------------------------------------------
