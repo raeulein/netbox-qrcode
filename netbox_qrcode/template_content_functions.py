@@ -147,15 +147,17 @@ def get_text_fields(config, obj):
 
 # --- mm  →  Pixel (300 dpi) -------------------------------------------
 def mm2px(val_mm: str | int) -> int:
-    """
-    '62'  oder '62mm'  →  696
-    23.5              →  278
-    """
+
     if isinstance(val_mm, (int, float)):
         mm = float(val_mm)
     else:
         mm = float(str(val_mm).rstrip("mm"))
     return round(mm * 300 / 25.4)
 
-def mm2csspx(val_mm):
-    return round(float(val_mm.rstrip('mm')) * 96 / 25.4)
+def mm2csspx(val_mm: str | int) -> int:
+
+    if isinstance(val_mm, (int, float)):
+        mm = float(val_mm)
+    else:
+        mm = float(str(val_mm).rstrip("mm"))
+    return round(mm * 96 / 25.4)

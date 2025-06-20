@@ -75,10 +75,11 @@ class QRCode(PluginTemplateExtension):
                 if isinstance(val, str) and val.endswith("mm"):
                     return f"{mm2px(val)}px"
                 return val
+            
 
             px_cfg = {k: _mm_to_px_str(v) for k, v in config.items()}
-            px_cfg["label_width"]  = f"{mm2csspx(config['label_width'])}px"
-            px_cfg["label_height"] = f"{mm2csspx(config['label_height'])}px"
+            px_cfg["label_width"]  = mm2csspx(px_cfg["label_width"])
+            px_cfg["label_height"] = mm2csspx(px_cfg["label_height"])
 
             # 2) qrcode3.html rendern (Card + Label-DIV)
             rendered = render_to_string(
