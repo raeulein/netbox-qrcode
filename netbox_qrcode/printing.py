@@ -42,67 +42,62 @@ def _get_printer_cfg() -> Tuple[Dict[str, Any], str]:
 from PIL import Image
 
 
-def _scale_image_to_label(img: Image.Image, width_px: int, height_px: int) -> Image.Image:
-    """Bringt das gerenderte HTML so auf die Label-Größe, dass **nichts abgeschnitten**
-    wird.  Das Motiv wird maximal vergrößert, bleibt dabei aber immer vollständig
-    innerhalb des Rahmens und wird anschließend zentriert."""
+# ---------------------------------------------------------------------------
+# Bild passend einpassen / Ausrichtung erst beim Druck drehen
+# ---------------------------------------------------------------------------
+from PIL import Image
 
-    # Faktor so wählen, dass beide Seiten ≤ Zielmaß (d. h. nichts ragt heraus)
+
+def _scale_image_to_label(img: Image.Image, width_px: int, height_px: int) -> Image.Image:
+    """Skaliert das gerenderte PNG so, dass absolut nichts beschnitten wird
+    (innerhalb der Ziel­fläche bleiben) und zentriert es anschließend."""
+
+    # maximal möglicher Faktor, bei dem beide Seiten ≤ Zielmaß bleiben
     scale = min(width_px / img.width, height_px / img.height)
     new_size = (round(img.width * scale), round(img.height * scale))
     img = img.resize(new_size, Image.LANCZOS)
 
-    # Weißes Hintergrund-Canvas in exakter Brother-Pixelgröße
+    # weißes Canvas in exakter Brother-Auflösung und mittig einfügen
     bg = Image.new("RGB", (width_px, height_px), "white")
     offset = ((width_px - new_size[0]) // 2, (height_px - new_size[1]) // 2)
     bg.paste(img, offset)
-
     return bg
 
 
 def _orient_image(img: Image.Image, width_px: int, height_px: int) -> Image.Image:
-    """Stellt sicher, dass das Bild dieselbe Quer/Hoch-Ausrichtung hat wie das Label."""
-    # Passt die Grundorientierung (Quer vs. Hoch)?
-    if (width_px >= height_px) == (img.width >= img.height):
-        return img  # alles gut
-
-    # Andernfalls um 90° drehen …
-    img = img.rotate(90, expand=True)
-
-    # … und, falls nötig, noch einmal auf das Label-Format einpassen
-    if img.size != (width_px, height_px):
-        img = _scale_image_to_label(img, width_px, height_px)
-
+    """Lässt das Bild bewusst in der *Original*-Ausrichtung.
+    Die eigentliche Rotation übernimmt erst der Brother-Treiber."""
     return img
 
 
+# ---------------------------------------------------------------------------
+# Hauptfunktion: HTML → Brother-QL-Druck
+# ---------------------------------------------------------------------------
 
 def print_label_from_html(html: str, label_code: str | None = None) -> None:
-    """Rendert HTML, skaliert/rotiert es passend und schickt es an den Brother‑Drucker."""
+    """Rendert HTML, skaliert es passend und schickt es an den Brother-Drucker."""
 
-    # 1) Drucker‑ und Label‑Spezifikation ermitteln
+    # 1) Drucker-/Label-Specs
     p_cfg, default_label = _get_printer_cfg()
     code = label_code or default_label
-
-    try:
-        spec = _LABEL_SPECS[code]
-    except KeyError as exc:
-        raise RuntimeError(f"Unbekannter Label‑Code '{code}'.") from exc
-
+    spec = _LABEL_SPECS[code]
     width_px, height_px = (spec, spec * 4) if isinstance(spec, int) else spec
 
-    # 2) HTML → Pillow (WeasyPrint rendert in 96 dpi → zu klein)
-    img: Image.Image = render_html_to_png(html, width_px, height_px)
+    # 2) HTML → PNG
+    img = render_html_to_png(html, width_px, height_px)
 
-    # 3) Auf Ziel‑Auflösung hochskalieren
+    # 3) Einpassen (niemals Beschnitt)
     img = _scale_image_to_label(img, width_px, height_px)
 
-    # 4) Orientierung prüfen / drehen
+    # 4) Original­ausrichtung beibehalten
     img = _orient_image(img, width_px, height_px)
 
-    # 5) In Brother‑Raster wandeln und senden
+    # 5) Am Brother erst *jetzt* drehen: Hochformat-Labels → 90 °
+    rotate_mode = "90" if height_px > width_px else "0"
+
+    # 6) In Brother-Raster wandeln und senden
     raster = BrotherQLRaster(p_cfg["MODEL"])
-    instr = convert(raster, [img], label=code, rotate="0")  # bereits korrekt orientiert
+    instr = convert(raster, [img], label=code, rotate=rotate_mode)
 
     backend_cls = backend_factory(p_cfg["BACKEND"])["backend_class"]
     backend_cls(p_cfg["ADDRESS"]).write(instr)
