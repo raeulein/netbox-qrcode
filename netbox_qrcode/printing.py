@@ -87,7 +87,8 @@ def print_label_from_html(html: str, label_code: str | None = None) -> None:
 
     # 5) In Brother‑Raster wandeln und senden
     raster = BrotherQLRaster(p_cfg["MODEL"])
-    instr = convert(raster, [img], label=code, rotate="0")  # bereits korrekt orientiert
+    rotate_flag = "90" if height_px > width_px else "0"
+    instr = convert(raster, [img], label=code, rotate=rotate_flag)
 
     backend_cls = backend_factory(p_cfg["BACKEND"])["backend_class"]
     backend_cls(p_cfg["ADDRESS"]).write(instr)
