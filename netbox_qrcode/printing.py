@@ -9,6 +9,23 @@ from PIL import Image
 from bs4 import BeautifulSoup
 
 from .html_render import render_html_to_png
+import os, time
+from PIL import Image          # steht weiter unten schon; trotzdem hier explizit
+
+# ---------------------------------------------------------------------------
+# Aktivieren, indem NETBOX_QR_DEBUG=1 als Umgebungsvariable gesetzt wird
+# ---------------------------------------------------------------------------
+_DEBUG_LABEL = "1"
+
+def _dump_step(img: Image.Image, step: str) -> None:
+    """Speichert das aktuelle Bild als PNG in /tmp und schreibt den Pfad in die Logs."""
+    if not _DEBUG_LABEL:
+        return
+    ts   = time.strftime("%Y%m%d_%H%M%S")
+    path = f"/tmp/qrcode_label_{step}_{ts}.png"
+    img.save(path)
+    print(f"[netbox_qrcode] DEBUG {step}: {path}")
+
 
 # ---------------------------------------------------------------------------
 # Pixel‑Maße bei 300 dpi – Keys entsprechen Brother‑Labelcodes
@@ -91,14 +108,17 @@ def print_label_from_html(html: str, label_code: str | None = None) -> None:
 
     width_px, height_px = (spec, spec * 4) if isinstance(spec, int) else spec
 
-    # 2) HTML → Pillow (WeasyPrint rendert in 96 dpi → zu klein)
+    # 2) HTML → Pillow (WeasyPrint rendert in 96 dpi → zu klein)
     img: Image.Image = render_html_to_png(html, width_px, height_px)
+    _dump_step(img, "01_rendered")
 
-    # 3) Auf Ziel‑Auflösung hochskalieren
+    # 3) Auf Ziel-Auflösung hochskalieren
     img = _scale_image_to_label(img, width_px, height_px)
+    _dump_step(img, "02_scaled")
 
     # 4) Orientierung prüfen / drehen
     img = _orient_image(img, width_px, height_px)
+    _dump_step(img, "03_oriented")
 
     # 5) In Brother‑Raster wandeln und senden
     raster = BrotherQLRaster(p_cfg["MODEL"])
