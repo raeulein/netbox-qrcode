@@ -53,41 +53,20 @@ def _get_printer_cfg() -> Tuple[Dict[str, Any], str]:
 
 
 # ---------------------------------------------------------------------------
-# Hilfsfunktionen: Skalierung, Ausrichtung, rotate-Wert
+# Helfer: rotate-Wert abhängig von Bild- und Label-Orientierung
 # ---------------------------------------------------------------------------
 
 
-def _scale_image_to_label(img: Image.Image, width_px: int, height_px: int) -> Image.Image:
-    """Skaliert das WeasyPrint-PNG so, dass es mindestens 300 dpi erreicht.
-
-    WeasyPrint rendert CSS-Pixel mit 96 dpi. Brother-QL erwartet ~300 dpi.
-    Wir wählen den größten Faktor aus Geometrie- und DPI-Anpassung.
+def _rotation_for_printer(img: Image.Image, width_px: int, height_px: int) -> str:
     """
-    dpi_src = img.info.get("dpi", (96, 96))[0] or 96
-    dpi_factor = 300 / dpi_src
-    geo_factor = max(width_px / img.width, height_px / img.height)
-    scale = max(dpi_factor, geo_factor, 1)
-
-    if scale == 1:
-        return img
-
-    new_size = (round(img.width * scale), round(img.height * scale))
-    return img.resize(new_size, Image.LANCZOS)
-
-
-def _orient_image(img: Image.Image, width_px: int, height_px: int) -> Image.Image:
-    """Dreht das Bild um 90 °, wenn seine Orientierung nicht zum Label passt."""
+    Liefert "0" (nichts drehen) oder "90" (90 ° rechts),
+    wenn die Orientierung des gerenderten PNGs nicht zur
+    Brother-Label-Spezifikation passt.  Die Drehung übernimmt
+    anschließend `brother_ql.convert()`, das die Abmessungen beibehält.
+    """
     img_landscape = img.width > img.height
     label_landscape = width_px > height_px
-
-    if img_landscape != label_landscape:
-        return img.rotate(90, expand=True)
-    return img
-
-
-def _rotation_for_printer(width_px: int, height_px: int) -> str:
-    """Liefert '0' (Hochformat) oder '90' (Querformat) für brother_ql.convert()."""
-    return "90" if width_px > height_px else "0"
+    return "90" if img_landscape != label_landscape else "0"
 
 
 # ---------------------------------------------------------------------------
@@ -96,7 +75,7 @@ def _rotation_for_printer(width_px: int, height_px: int) -> str:
 
 
 def print_label_from_html(html: str, label_code: str | None = None) -> None:
-    """Rendert HTML, skaliert/rotiert es passend und schickt es an den Brother-Drucker."""
+    """Rendert HTML, bestimmt korrekte Drehung und schickt Rasterdaten an den Drucker."""
 
     # 1) Drucker- und Label-Spezifikation ermitteln
     p_cfg, default_label = _get_printer_cfg()
@@ -109,18 +88,14 @@ def print_label_from_html(html: str, label_code: str | None = None) -> None:
 
     width_px, height_px = (spec, spec * 4) if isinstance(spec, int) else spec
 
-    # 2) HTML → Pillow (WeasyPrint rendert in 96 dpi → zu klein)
+    # 2) HTML → Pillow (WeasyPrint rendert direkt in die richtigen Abmessungen)
     img: Image.Image = render_html_to_png(html, width_px, height_px)
 
-    # 3) Auf Ziel-Auflösung hochskalieren
-    img = _scale_image_to_label(img, width_px, height_px)
+    # 3) rotate-Wert ermitteln (Brother dreht dann selbst – Bildgröße bleibt unverändert)
+    rotate = _rotation_for_printer(img, width_px, height_px)
 
-    # 4) Orientierung prüfen / drehen
-    img = _orient_image(img, width_px, height_px)
-
-    # 5) In Brother-Raster wandeln und senden
+    # 4) In Brother-Raster wandeln und senden
     raster = BrotherQLRaster(p_cfg["MODEL"])
-    rotate = _rotation_for_printer(width_px, height_px)
     instr = convert(raster, [img], label=code, rotate=rotate)
 
     backend_cls = backend_factory(p_cfg["BACKEND"])["backend_class"]
