@@ -53,7 +53,8 @@ class QRCode(PluginTemplateExtension):
 
         # -------- Direktdruck ODER Vorschau ----------
         if request.GET.get("direct_print") == str(labelDesignNo) or \
-           request.GET.get("show_png")     == str(labelDesignNo):
+           request.GET.get("show_png")     == str(labelDesignNo) or \
+           request.GET.get("show_pdf")  == str(labelDesignNo):
 
 
             # 0) Breite/Höhe des Ziel-Labels in px (Brother-Spezifikation)
@@ -95,6 +96,15 @@ class QRCode(PluginTemplateExtension):
                 data_uri = "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
                 # Bild als ganz normales <img> zurückgeben
                 return f'<img src="{data_uri}" alt="Label Preview" style="max-width:100%;border:1px solid #ccc"/>'
+            
+            if request.GET.get("show_pdf") == str(labelDesignNo):
+                # HTML → PDF
+                pdf_bytes = render_html_to_png(html_label, width_px, height_px, want_pdf=True)
+                response = thisSelf.context['response']
+                response['Content-Type'] = 'application/pdf'
+                response['Content-Disposition'] = f'inline; filename="{obj.name}_label.pdf"'
+                response.write(pdf_bytes)
+                return response
             # ---------------------------------------------------------------
 
             # 4) Drucken

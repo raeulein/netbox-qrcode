@@ -12,7 +12,7 @@ from typing import Tuple
 from PIL import Image
 
 
-def render_html_to_png(html: str, width_px: int, height_px: int) -> Image.Image:
+def render_html_to_png(html: str, width_px: int, height_px: int, want_pdf=False) -> Image.Image:
     from weasyprint import HTML, CSS                       # Laufzeit-Import
 
     css = CSS(string="""
@@ -35,6 +35,8 @@ def render_html_to_png(html: str, width_px: int, height_px: int) -> Image.Image:
 
     pdf_bytes = html_obj.write_pdf(stylesheets=[css])
     pdf = pdfium.PdfDocument(pdf_bytes)
+    if want_pdf:
+        return pdf_bytes  # PDF zurückgeben, wenn gewünscht
 
     page = pdf.get_page(0)
     pdf_w, pdf_h = page.get_size()  # ← tatsächliche Breite/Höhe
