@@ -118,7 +118,7 @@ def print_label_from_html(html: str, label_code: str | None = None) -> None:
 # Label‑DIV aus qrcode3.html extrahieren
 # ---------------------------------------------------------------------------
 
-def extract_label_html(rendered_html: str, div_id: str, width_px: int, height_px: int) -> str:
+def extract_label_html(rendered_html: str, div_id: str) -> str:
     """Extrahiert den Label‑Container und setzt ihn in ein Minimal‑HTML."""
 
     soup = BeautifulSoup(rendered_html, "html.parser")

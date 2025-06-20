@@ -94,7 +94,7 @@ class QRCode(PluginTemplateExtension):
             )
 
             div_id = f"QR-Code-Label_{labelDesignNo}"
-            html_label = extract_label_html(rendered, div_id, mm2csspx(width_mm), mm2csspx(height_mm))
+            html_label = extract_label_html(rendered, div_id)
 
             # --- PNG-Vorschau? -------------------------------------------
             if request.GET.get("show_png") == str(labelDesignNo):
