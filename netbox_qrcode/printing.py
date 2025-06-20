@@ -91,8 +91,8 @@ def print_label_from_html(html: str, label_code: str | None = None) -> None:
     code = label_code or default_label
     spec = _LABEL_SPECS[code]
     width_px, height_px = (spec, spec * 4) if isinstance(spec, int) else spec
-    width_mm = width_px / 300 * 25.4  # mm für WeasyPrint
-    height_mm = height_px / 300 * 25.4  # mm für WeasyPrint
+    width_mm = height_px / 300 * 25.4  # mm für WeasyPrint
+    height_mm = width_px / 300 * 25.4  # mm für WeasyPrint
     
     # 2) HTML → PNG
     img = render_html_to_png(html, width_mm, height_mm)
