@@ -60,23 +60,26 @@ class QRCode(PluginTemplateExtension):
             # 0) Breite/Höhe des Ziel-Labels in px (Brother-Spezifikation)
             p_cfg, code = _get_printer_cfg()
             spec = _LABEL_SPECS[code]
-            #width_px, height_px = (spec, spec * 4) if isinstance(spec, int) else spec
-                    
-            width_px, height_px = (
-                (spec, spec * 4) if isinstance(spec, int) else spec
-            )
+            width_px, height_px = (spec, spec * 4) if isinstance(spec, int) else spec
 
-            #Tausche Breite/Höhe, weil Drucker im Hochformat druckt
+            #Tausche Breite/Höhe, weil Papierformat = Hochformat aber Label-Designs = Querformat und rechne in mm um
             width_mm = height_px / 300 * 25.4  # mm für WeasyPrint
             height_mm = width_px / 300 * 25.4  # mm für WeasyPrint
 
-            # 1) mm-Angaben → px-Strings bei 300 dpi
-            def _mm_to_px_str(val):
-                if isinstance(val, str) and val.endswith("mm"):
-                    return f"{mm2px(val)}px"
-                return val
 
-            px_cfg = {k: _mm_to_px_str(v) for k, v in config.items()}
+            px_cfg = {
+                "label_edge_top": config.get("label_edge_top", "0px"),
+                "label_edge_left": config.get("label_edge_left", "0px"),
+                "label_edge_right": config.get("label_edge_right", "0px"),
+                "label_edge_bottom": config.get("label_edge_bottom", "0px"),
+                "text_location": config.get("text_location", "bottom"),
+                "text_align_horizontal": config.get("text_align_horizontal", "center"),
+                "text_align_vertical": config.get("text_align_vertical", "middle"),
+                "font": config.get("font", "Arial"),
+                "font_size": config.get("font_size", 12),
+                "font_weight": config.get("font_weight", "normal"),
+                "font_color": config.get("font_color", "#000000"),
+            }
             px_cfg["label_width"]  = f"{mm2csspx(width_mm)}px"
             px_cfg["label_height"] = f"{mm2csspx(height_mm)}px"
 
