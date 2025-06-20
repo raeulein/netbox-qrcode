@@ -37,29 +37,44 @@ def _get_printer_cfg() -> Tuple[Dict[str, Any], str]:
 
 
 # ---------------------------------------------------------------------------
-# Hauptfunktion: HTML → Brother‑QL‑Druck
+# Bild passend einpassen / ausrichten
 # ---------------------------------------------------------------------------
+from PIL import Image
+
 
 def _scale_image_to_label(img: Image.Image, width_px: int, height_px: int) -> Image.Image:
-    """Bringt das Bild auf die Ziel‑Auflösung (≥ 300 dpi)."""
-    if img.size == (width_px, height_px):
-        return img  # alles passt schon
+    """Bringt das gerenderte HTML so auf die Label-Größe, dass **nichts abgeschnitten**
+    wird.  Das Motiv wird maximal vergrößert, bleibt dabei aber immer vollständig
+    innerhalb des Rahmens und wird anschließend zentriert."""
 
-    # Skalierungsfaktor wählen, so dass beide Seiten ≥ Zielmaß
-    scale = max(width_px / img.width, height_px / img.height)
+    # Faktor so wählen, dass beide Seiten ≤ Zielmaß (d. h. nichts ragt heraus)
+    scale = min(width_px / img.width, height_px / img.height)
     new_size = (round(img.width * scale), round(img.height * scale))
-    return img.resize(new_size, Image.LANCZOS)
+    img = img.resize(new_size, Image.LANCZOS)
+
+    # Weißes Hintergrund-Canvas in exakter Brother-Pixelgröße
+    bg = Image.new("RGB", (width_px, height_px), "white")
+    offset = ((width_px - new_size[0]) // 2, (height_px - new_size[1]) // 2)
+    bg.paste(img, offset)
+
+    return bg
 
 
 def _orient_image(img: Image.Image, width_px: int, height_px: int) -> Image.Image:
-    """Dreht das Bild, falls Breite/Höhe vertauscht sind."""
-    if img.size == (width_px, height_px):
-        return img
-    if img.size == (height_px, width_px):
-        return img.rotate(90, expand=True)
-    raise RuntimeError(
-        f"Bad image dimensions after scaling: {img.size}. Expecting {width_px}×{height_px}."
-    )
+    """Stellt sicher, dass das Bild dieselbe Quer/Hoch-Ausrichtung hat wie das Label."""
+    # Passt die Grundorientierung (Quer vs. Hoch)?
+    if (width_px >= height_px) == (img.width >= img.height):
+        return img  # alles gut
+
+    # Andernfalls um 90° drehen …
+    img = img.rotate(90, expand=True)
+
+    # … und, falls nötig, noch einmal auf das Label-Format einpassen
+    if img.size != (width_px, height_px):
+        img = _scale_image_to_label(img, width_px, height_px)
+
+    return img
+
 
 
 def print_label_from_html(html: str, label_code: str | None = None) -> None:
