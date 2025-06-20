@@ -33,8 +33,7 @@ def render_html_to_png(html: str, width_px: int, height_px: int, want_pdf=False)
     css = CSS(
         string=f"""
             @page {{
-                
-                size: 1000px 100px;
+                size: 1000cm 100cm;
                 margin: 0;
             }}
             html, body {{
