@@ -5,13 +5,13 @@ from .version import __version__
 class QRCodeConfig(PluginConfig):
     name = 'netbox_qrcode'
     verbose_name = 'qrcode'
-    description = 'Generate QR codes for the objects'
+    description = 'Modified: Generate QR codes for the objects'
     version = __version__
-    author = 'Nikolay Yuzefovich'
+    author = 'JOnas Rau, Nikolay Yuzefovich'
     author_email = 'mgk.kolek@gmail.com'
     required_settings = []
     min_version = '4.3.0'
-    max_version = '4.3.99'
+    max_version = '9.0.0'
     default_settings = {
 	
         ################################## 
